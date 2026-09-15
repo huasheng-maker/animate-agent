@@ -1,24 +1,33 @@
 # Source Index
 
-date: 2026-09-08
+date: 2026-09-11
 status: active
 
 ## Project Sources
 
 - `AGENTS.md`: AgentGo v1.14.0 Chinese protocol installed at repository root on 2026-07-29.
-- `README.md`: high-level project summary, current demo artifacts, quick run commands, and engineering principles.
+- `README.md`: authoritative contributor-facing overview of current architecture, four usage paths,
+  file responsibilities, supported extension points, verification commands, and known limitations.
 - `pyproject.toml`: Python package metadata, dependencies, pytest configuration, Ruff, and strict mypy settings.
 - `requirements.txt` and `requirements-dev.txt`: runtime and development dependency pins/ranges.
-- `docs/PROJECT_EXPECTATIONS.md`: product vision and quality bar for Interactive Knowledge Movie output.
-- `docs/TECH_STACK.md`: proposed backend/frontend/rendering stack and JSON animation spec direction.
-- `docs/TODO.md`: MVP scope, animation quality standards, and current prototype boundaries.
-- `docs/INTERACTION_FLOW.md`: interaction pipeline from input through controlled JSON spec to rendering and feedback.
-- `docs/interaction-flow.drawio`: editable flowchart source; PNG exports live in `docs/`.
+- `docs/poject-overall/PROJECT_EXPECTATIONS.md`: product vision and quality bar for Interactive Knowledge Movie output.
+- `docs/poject-overall/TECH_STACK.md`: proposed backend/frontend/rendering stack and JSON animation spec direction.
+- `docs/poject-overall/TODO.md`: MVP scope, animation quality standards, and current prototype boundaries.
+- `docs/interaction-flow/INTERACTION_FLOW.md`: interaction pipeline from input through controlled JSON spec to rendering and feedback.
+- `docs/interaction-flow/interaction-flow.drawio`: editable flowchart source; PNG exports live beside it.
 - `data/samples/`: sample ROS and robot-obstacle-avoidance source material.
 - `frontend/demo/`: static and legacy frontend prototypes.
 - `frontend/app/` and `frontend/package.json`: Next.js DocumentIR parser/viewer and its build scripts.
 - `src/animate_agent/api.py`: `POST /api/documents/from-url` HTTP boundary.
 - `src/animate_agent/documents/`: shared DocumentIR schema and URL HTML ingestion adapter.
+- `src/animate_agent/ingestion/`: stable acquisition models, adapter protocol/router, URL security,
+  Crawl4AI compatibility boundary, and pure normalization.
+- `docs/web-ingestion-crawl4ai.md`: scope, architecture, security, installation, usage, extension,
+  and safe-upgrade guide for the NormalizedDocument milestone.
+- `tests/unit/test_ingestion_security.py` and `tests/unit/test_web_document_adapter.py`: deterministic
+  SSRF, policy, transformation, retention, lifecycle, and error coverage.
+- `tests/integration/test_crawl4ai_smoke.py`: opt-in local-browser raw-HTML integration check.
+- `uv.lock`: resolved dependency graph including Crawl4AI 0.9.3 hashes.
 - `tests/fixtures/manim_quickstart.html`: deterministic Manim-like HTML fixture.
 - `docs/document-ingestion-milestone.md`: milestone boundary, run commands, and verification commands.
 - `src/animate_agent/`: Python implementation area.
@@ -30,6 +39,8 @@ status: active
 - Dev dependencies include `pytest`, `ruff`, and `mypy`.
 - The DocumentIR frontend uses Next.js and validates with `npm --prefix frontend run typecheck` and `build`.
 - The URL ingestion path was browser-verified against the live Manim Quickstart on 2026-09-08.
+- On 2026-09-11, 51 tests passed with the browser integration skipped by default; the explicitly
+  enabled Crawl4AI 0.9.3 raw-HTML browser test also passed. Ruff, strict mypy, and diff checks passed.
 
 ## Quality/Risk Notes
 

@@ -24,6 +24,7 @@ dependencies = [
   "python-docx>=0.8.11",
   "python-multipart>=0.0.6",
   "pyyaml>=6.0",
+  "crawl4ai>=0.9.3,<0.10.0",
 ]
 
 [project.scripts]
@@ -42,6 +43,9 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+  "integration: opt-in tests that require installed browser or external services",
+]
 
 [tool.ruff]
 line-length = 100
