@@ -140,6 +140,20 @@ def test_from_url_api_returns_document_ir(monkeypatch: pytest.MonkeyPatch) -> No
     assert DocumentIR.model_validate(response.json()) == expected
 
 
+def test_api_allows_next_dev_server_on_an_available_local_port() -> None:
+    response = TestClient(api.app).options(
+        "/api/documents/from-url",
+        headers={
+            "Origin": "http://localhost:3001",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:3001"
+
+
 def test_ingest_url_persists_valid_json(tmp_path: Path) -> None:
     transport = httpx.MockTransport(
         lambda request: httpx.Response(

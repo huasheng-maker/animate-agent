@@ -23,7 +23,9 @@ type DocumentIR = {
   sections: Section[];
 };
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const apiEndpoint = process.env.NEXT_PUBLIC_API_BASE_URL
+  ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/documents/from-url`
+  : "/api/documents/from-url";
 
 export default function Home() {
   const [url, setUrl] = useState(
@@ -41,7 +43,7 @@ export default function Home() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch(`${apiBaseUrl}/api/documents/from-url`, {
+      const response = await fetch(apiEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
@@ -56,7 +58,13 @@ export default function Home() {
     } catch (reason) {
       setDocument(null);
       setActiveSectionId(null);
-      setError(reason instanceof Error ? reason.message : "Could not parse this document.");
+      setError(
+        reason instanceof TypeError
+          ? "Could not reach the frontend API route. Check that the Next.js development server is still running, then retry."
+          : reason instanceof Error
+            ? reason.message
+            : "Could not parse this document.",
+      );
     } finally {
       setLoading(false);
     }

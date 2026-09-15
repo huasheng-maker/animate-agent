@@ -1,6 +1,6 @@
 # Project Overview
 
-date: 2026-09-08
+date: 2026-09-11
 status: active
 
 ## Summary
@@ -15,6 +15,8 @@ Animate Agent / Intuition Engine Agent is a prototype for turning text, document
 - `frontend/app/`: Next.js DocumentIR parser/viewer for the first URL ingestion milestone.
 - `src/animate_agent/api.py`: FastAPI endpoint for URL ingestion.
 - `src/animate_agent/documents/`: validated DocumentIR models plus HTML fetch, parse, clean, and persistence pipeline.
+- `src/animate_agent/ingestion/`: Crawl4AI-independent `NormalizedDocument` domain boundary,
+  adapter protocol/router, SSRF policy, and Crawl4AI web adapter for URL/raw HTML acquisition.
 - `src/animate_agent/`: Python package for reusable animation elements, templates, rendering/storyboard/document modules, and interaction controls.
 - `docs/`: product expectations, tech stack, todo, interaction flow notes, and draw.io source/exported diagrams.
 - `tests/unit/`: current unit tests for animation elements and templates.
@@ -39,3 +41,5 @@ Animate Agent / Intuition Engine Agent is a prototype for turning text, document
 - Static JS syntax checks may use Node where applicable, but they do not prove browser behavior.
 - Browser behavior should be verified with a local HTTP server or direct file open plus Playwright/screenshots when frontend behavior is changed.
 - URL ingestion milestone validation also includes `ruff check src tests`, strict `mypy src`, frontend `typecheck`, and `build`.
+- Web acquisition validation includes mocked unit/security tests and the opt-in
+  `tests/integration/test_crawl4ai_smoke.py` real-browser raw-HTML smoke test.

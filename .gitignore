@@ -6,6 +6,8 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 pytest-cache-files-*/
+pytest-of-*/
+test-temp-*/
 .ruff_cache/
 .mypy_cache/
 .cache/
@@ -45,3 +47,4 @@ LOCAL_CHANGE_SUMMARY_*.md
 /devlog/
 /源代码文件/
 /源代码文件.zip
+.agents
