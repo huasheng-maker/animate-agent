@@ -9,11 +9,24 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict
 
+from animate_agent.animation.service import generate_animation, generate_animation_from_url
 from animate_agent.documents.file_parser import SUPPORTED_EXTENSIONS
 from animate_agent.documents.models import DocumentIR
-from animate_agent.documents.service import ingest_file, ingest_url
+from animate_agent.documents.service import ingest_file, ingest_source, ingest_url
+from animate_agent.ingestion.exceptions import (
+    BlockedAddress,
+    ContentTooLarge,
+    CrawlTimeout,
+    IngestionError,
+    InvalidURL,
+    RobotsDenied,
+    UnsupportedScheme,
+)
 from animate_agent.knowledge.models import LessonIR
 from animate_agent.knowledge.service import generate_lesson
+from animate_agent.llm import MissingLLMKeyError
+from animate_agent.rendering.models import RenderSpec
+from animate_agent.sources.models import QuerySourceInput
 
 ALLOWED_EXTENSIONS = SUPPORTED_EXTENSIONS
 
@@ -22,6 +35,12 @@ class FromUrlRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     url: AnyHttpUrl
+
+
+class FromQueryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    query: str
 
 
 app = FastAPI(title="Animate Agent API", version="0.1.0")
@@ -34,12 +53,40 @@ app.add_middleware(
 )
 
 
+def _ingestion_http_error(exc: IngestionError) -> HTTPException:
+    if isinstance(exc, (InvalidURL, UnsupportedScheme)):
+        status_code = 422
+    elif isinstance(exc, (BlockedAddress, RobotsDenied)):
+        status_code = 403
+    elif isinstance(exc, ContentTooLarge):
+        status_code = 413
+    elif isinstance(exc, CrawlTimeout):
+        status_code = 504
+    else:
+        status_code = 502
+    return HTTPException(status_code=status_code, detail=str(exc))
+
+
 @app.post("/api/documents/from-url", response_model=DocumentIR)
 async def create_document_from_url(request: FromUrlRequest) -> DocumentIR:
     try:
         return await ingest_url(str(request.url))
+    except IngestionError as exc:
+        raise _ingestion_http_error(exc) from exc
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"Could not fetch document: {exc}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/documents/from-query", response_model=DocumentIR)
+async def create_document_from_query(request: FromQueryRequest) -> DocumentIR:
+    try:
+        return await ingest_source(QuerySourceInput(query=request.query))
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"Web Search failed: {exc}") from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -49,8 +96,42 @@ async def create_lesson_from_url(request: FromUrlRequest) -> LessonIR:
     try:
         document = await ingest_url(str(request.url))
         return await generate_lesson(document)
+    except IngestionError as exc:
+        raise _ingestion_http_error(exc) from exc
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"Could not fetch document: {exc}") from exc
+    except MissingLLMKeyError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/animations/from-url", response_model=RenderSpec)
+async def create_animation_from_url(request: FromUrlRequest) -> RenderSpec:
+    try:
+        return await generate_animation_from_url(str(request.url))
+    except IngestionError as exc:
+        raise _ingestion_http_error(exc) from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"Animation generation failed: {exc}") from exc
+    except MissingLLMKeyError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/animations/from-query", response_model=RenderSpec)
+async def create_animation_from_query(request: FromQueryRequest) -> RenderSpec:
+    try:
+        return await generate_animation(QuerySourceInput(query=request.query))
+    except IngestionError as exc:
+        raise _ingestion_http_error(exc) from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"Animation generation failed: {exc}") from exc
+    except MissingLLMKeyError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -73,5 +154,7 @@ async def create_lesson_from_file(file: Annotated[UploadFile, File()]) -> Lesson
         return await generate_lesson(document)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except MissingLLMKeyError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     finally:
         tmp_path.unlink(missing_ok=True)

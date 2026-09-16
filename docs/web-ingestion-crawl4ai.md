@@ -1,6 +1,6 @@
 # Web acquisition and normalization
 
-This module implements exactly one boundary in **Draw the World**:
+This optional module implements one browser-crawling boundary in **Animate Agent**:
 
 ```text
 untrusted URL or raw HTML
@@ -9,10 +9,10 @@ untrusted URL or raw HTML
     -> stable NormalizedDocument
 ```
 
-It does **not** generate `DocumentIR`, storyboards, animation plans, or renderer code. It does
-not choose Manim, Three.js, React, or any other renderer. Crawl4AI is infrastructure;
-`NormalizedDocument` is the acquisition boundary; later `DocumentIR` generation remains product
-logic owned by this repository.
+This module itself does **not** generate `DocumentIR`, storyboards, animation plans, or renderer
+code. Crawl4AI remains infrastructure and `NormalizedDocument` remains the acquisition boundary.
+The separate `documents.normalized` product layer now converts that stable boundary to
+`DocumentIR`; downstream services never import Crawl4AI types.
 
 ## Architecture
 
@@ -28,16 +28,19 @@ logic owned by this repository.
   or reads Crawl4AI objects.
 - `ingestion.web.normalizer` is pure transformation from an application-owned crawl snapshot to a
   `NormalizedDocument`.
+- `documents.normalized.normalized_document_to_ir` is the separate deterministic bridge from this
+  boundary into product logic.
 
-The existing `animate_agent.documents` package is the earlier direct-to-`DocumentIR` milestone.
-This module intentionally does not call or replace it yet.
+The default URL APIs now use the bounded single-page Web Reader and enter `DocumentIR` through
+`SourceDocument[]`. This layer is selected explicitly for dynamic pages and future multi-page or
+whole-documentation-site ingestion; it is not on the default query/URL path.
 
 ## Install
 
 Python 3.11 or newer is required. Crawl4AI is constrained to the reviewed 0.9 release line:
 
 ```powershell
-uv sync --extra dev
+uv sync --extra dev --extra crawl4ai
 uv run crawl4ai-setup
 ```
 
@@ -46,6 +49,10 @@ If Playwright's Chromium setup did not complete:
 ```powershell
 uv run python -m playwright install chromium
 ```
+
+Windows 下通过 `uvicorn --reload` 调用 URL API 时，Uvicorn 会为服务子进程选择
+不支持 Playwright 子进程传输的 Selector 事件循环。`documents.service.ingest_url`
+会检测该环境，并在专用线程的 Proactor 事件循环中完成浏览器的创建、采集和关闭。
 
 No dependency is downloaded dynamically at application runtime.
 
@@ -167,9 +174,13 @@ API choices in this implementation were checked against the current upstream
 [CrawlResult reference](https://docs.crawl4ai.com/core/crawler-result/), and
 [hooks guide](https://docs.crawl4ai.com/advanced/hooks-auth/).
 
-The recommended next milestone is a separate, deterministic
-`NormalizedDocument -> DocumentIR` service with its own schema-validation tests. It should consume
-this model and must not import Crawl4AI.
+The deterministic `NormalizedDocument -> DocumentIR` bridge lives in `documents/normalized.py` and
+has schema-validation coverage. It consumes only this application model and does not import
+Crawl4AI.
+
+Some sites publish mixed `Disallow`/`Allow` robots rules that Crawl4AI 0.9.x may interpret more
+strictly than the browser-visible path suggests. The application keeps robots enforcement enabled;
+for documentation maintained in a public repository, use the official raw/source URL instead.
 
 ## Known limitations
 
@@ -181,4 +192,5 @@ this model and must not import Crawl4AI.
 - `crawl.javascript_enabled` records policy, not a proof that the page required JavaScript.
 - Authenticated sessions, proxies, deep crawling, local files, arbitrary caller-supplied page
   scripts, LLM extraction, binary downloads, and distributed crawling are intentionally absent.
-- The earlier FastAPI `DocumentIR` endpoint has not been migrated to this boundary in this phase.
+- Browser instances are currently opened per URL ingestion call; application-lifecycle reuse and a
+  concurrency limit are still future production work.

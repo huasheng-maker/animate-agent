@@ -38,6 +38,7 @@ const ui = {
 const state = {
   spec: null,
   scene: null,
+  sceneIndex: 0,
   sim: null,
   viewport: null,
   theme: null,
@@ -204,6 +205,19 @@ function setStep(index) {
   renderSteps();
 }
 
+function moveStep(delta) {
+  const next = state.stepIndex + delta;
+  if (next >= state.scene.steps.length && state.sceneIndex < state.spec.scenes.length - 1) {
+    loadScene(state.sceneIndex + 1);
+    return;
+  }
+  if (next < 0 && state.sceneIndex > 0) {
+    loadScene(state.sceneIndex - 1, -1);
+    return;
+  }
+  setStep(next);
+}
+
 function renderSteps() {
   ui.steps.replaceChildren(
     ...state.scene.steps.map((step, index) => {
@@ -238,7 +252,7 @@ function renderControls() {
       button.addEventListener("click", () => {
         if (control.action === "reset_scene") setStep(state.stepIndex);
         else if (control.action === "toggle_play") togglePlay();
-        else if (control.action === "advance_timeline") setStep(state.stepIndex + 1);
+        else if (control.action === "advance_timeline") moveStep(1);
       });
       ui.controls.append(button);
       continue;
@@ -299,22 +313,23 @@ function togglePlay() {
 function bind() {
   ui.play.addEventListener("click", togglePlay);
   ui.reset.addEventListener("click", () => setStep(0));
-  ui.prev.addEventListener("click", () => setStep(state.stepIndex - 1));
-  ui.next.addEventListener("click", () => setStep(state.stepIndex + 1));
+  ui.prev.addEventListener("click", () => moveStep(-1));
+  ui.next.addEventListener("click", () => moveStep(1));
   window.addEventListener("keydown", (event) => {
     if (event.code === "Space") {
       event.preventDefault();
       togglePlay();
     } else if (event.code === "ArrowRight") {
-      setStep(state.stepIndex + 1);
+      moveStep(1);
     } else if (event.code === "ArrowLeft") {
-      setStep(state.stepIndex - 1);
+      moveStep(-1);
     }
   });
   window.addEventListener("resize", () => state.viewport.resize());
 }
 
-function loadScene(index) {
+function loadScene(index, stepIndex = 0) {
+  state.sceneIndex = index;
   state.scene = state.spec.scenes[index];
   state.byId = new Map(state.scene.elements.map((element) => [element.id, element]));
   state.obstacleIds = state.scene.elements
@@ -334,7 +349,7 @@ function loadScene(index) {
   ui.goal.textContent = state.scene.teaching_goal || "";
 
   renderControls();
-  setStep(0);
+  setStep(stepIndex < 0 ? state.scene.steps.length - 1 : stepIndex);
 }
 
 async function main() {
@@ -343,9 +358,15 @@ async function main() {
 
   let spec;
   try {
-    const response = await fetch(specUrl);
-    if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
-    spec = await response.json();
+    if (specUrl === "session") {
+      const stored = window.sessionStorage.getItem("animate-agent-render-spec");
+      if (!stored) throw new Error("当前浏览器会话里没有生成的 RenderSpec");
+      spec = JSON.parse(stored);
+    } else {
+      const response = await fetch(specUrl);
+      if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
+      spec = await response.json();
+    }
   } catch (error) {
     fail(`取不到 spec：${specUrl}\n${error instanceof Error ? error.message : error}`);
     return;
@@ -371,9 +392,11 @@ async function main() {
   // index in a URL should still show you a picture, not a blank page.
   const sceneIndex = Number(params.get("scene") ?? 0);
   const stepIndex = Number(params.get("step") ?? 0);
-  loadScene(Number.isInteger(sceneIndex) ? Math.max(0, Math.min(spec.scenes.length - 1, sceneIndex)) : 0);
+  loadScene(
+    Number.isInteger(sceneIndex) ? Math.max(0, Math.min(spec.scenes.length - 1, sceneIndex)) : 0,
+    Number.isInteger(stepIndex) ? stepIndex : 0,
+  );
   bind();
-  if (Number.isInteger(stepIndex) && stepIndex > 0) setStep(stepIndex);
   requestAnimationFrame(tick);
 }
 

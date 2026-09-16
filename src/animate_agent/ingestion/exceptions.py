@@ -44,6 +44,10 @@ class CrawlFailed(IngestionError):
     code = "crawl_failed"
 
 
+class RobotsDenied(IngestionError):
+    code = "robots_denied"
+
+
 class NormalizationError(IngestionError):
     code = "normalization_error"
 

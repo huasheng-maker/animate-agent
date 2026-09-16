@@ -1,35 +1,52 @@
-"""Document ingestion orchestration and persistence."""
+"""Source resolution, DocumentIR construction, and persistence."""
 
-import json
 from pathlib import Path
 
-import httpx
-
-from animate_agent.documents.fetcher import fetch_html
-from animate_agent.documents.file_parser import parse_file
+from animate_agent.documents.builder import DocumentIRBuilder, build_document_ir
 from animate_agent.documents.models import DocumentIR
-from animate_agent.documents.parser import parse_html
+from animate_agent.sources.adapters import FileAdapter
+from animate_agent.sources.models import FileSourceInput, SourceInput, UrlSourceInput
+from animate_agent.sources.resolver import SourceResolver
 
 DEFAULT_DOCUMENTS_DIR = Path("data/documents")
+
+
+def _persist(document: DocumentIR, output_dir: Path) -> DocumentIR:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    destination = output_dir / f"{document.document_id}.json"
+    destination.write_text(document.model_dump_json(indent=2), encoding="utf-8")
+    return document
+
+
+async def ingest_source(
+    source: SourceInput,
+    *,
+    output_dir: Path = DEFAULT_DOCUMENTS_DIR,
+    resolver: SourceResolver | None = None,
+    builder: DocumentIRBuilder | None = None,
+) -> DocumentIR:
+    """Resolve one input and build DocumentIR from SourceDocument objects only."""
+
+    sources = await (resolver or SourceResolver()).resolve(source)
+    document = await (builder or DocumentIRBuilder()).build(sources)
+    return _persist(document, output_dir)
 
 
 async def ingest_url(
     url: str,
     *,
     output_dir: Path = DEFAULT_DOCUMENTS_DIR,
-    client: httpx.AsyncClient | None = None,
+    resolver: SourceResolver | None = None,
+    builder: DocumentIRBuilder | None = None,
 ) -> DocumentIR:
-    """Fetch, parse, validate, and persist one URL document."""
+    """Resolve a direct URL through the lightweight single-page Web Reader."""
 
-    html = await fetch_html(url, client=client)
-    document = parse_html(html, url)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    destination = output_dir / f"{document.document_id}.json"
-    destination.write_text(
-        json.dumps(document.model_dump(mode="json"), ensure_ascii=False, indent=2),
-        encoding="utf-8",
+    return await ingest_source(
+        UrlSourceInput(url=url),
+        output_dir=output_dir,
+        resolver=resolver,
+        builder=builder,
     )
-    return document
 
 
 def ingest_file(
@@ -38,11 +55,6 @@ def ingest_file(
     output_dir: Path = DEFAULT_DOCUMENTS_DIR,
 ) -> DocumentIR:
     """Parse, validate, and persist one uploaded document file."""
-    document = parse_file(path)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    destination = output_dir / f"{document.document_id}.json"
-    destination.write_text(
-        json.dumps(document.model_dump(mode="json"), ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    return document
+    source = FileAdapter().resolve_sync(FileSourceInput(path=Path(path)))[0]
+    document = build_document_ir([source])
+    return _persist(document, output_dir)

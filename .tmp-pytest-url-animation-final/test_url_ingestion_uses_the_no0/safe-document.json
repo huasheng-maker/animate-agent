@@ -1,0 +1,24 @@
+{
+  "document_id": "safe-document",
+  "title": "Safe title",
+  "source": {
+    "type": "url",
+    "url": "https://example.com/final"
+  },
+  "sections": [
+    {
+      "id": "section-install",
+      "title": "Install",
+      "level": 2,
+      "blocks": [
+        {
+          "id": "section-install-block-1",
+          "type": "paragraph",
+          "text": "Run the safe command.",
+          "language": null,
+          "source_ref": null
+        }
+      ]
+    }
+  ]
+}

@@ -23,30 +23,52 @@ type DocumentIR = {
   sections: Section[];
 };
 
-const apiEndpoint = process.env.NEXT_PUBLIC_API_BASE_URL
-  ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/documents/from-url`
-  : "/api/documents/from-url";
+type RenderSpec = {
+  storyboard_id: string;
+  title: string;
+  scenes: unknown[];
+};
+
+type InputMode = "url" | "query";
+
+function apiEndpoint(kind: "documents" | "animations", mode: InputMode) {
+  const path = `/api/${kind}/from-${mode}`;
+  return process.env.NEXT_PUBLIC_API_BASE_URL
+    ? `${process.env.NEXT_PUBLIC_API_BASE_URL}${path}`
+    : path;
+}
 
 export default function Home() {
+  const [mode, setMode] = useState<InputMode>("url");
   const [url, setUrl] = useState(
-    "https://docs.manim.community/en/stable/tutorials/quickstart.html",
+    "https://raw.githubusercontent.com/ManimCommunity/manim/main/docs/source/tutorials/quickstart.rst",
   );
+  const [query, setQuery] = useState("How does retrieval-augmented generation work?");
   const [document, setDocument] = useState<DocumentIR | null>(null);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<"document" | "animation" | null>(null);
 
   const activeSection = document?.sections.find((section) => section.id === activeSectionId);
+  const value = mode === "url" ? url : query;
+  const requestBody = mode === "url" ? { url } : { query };
+
+  function selectMode(nextMode: InputMode) {
+    setMode(nextMode);
+    setDocument(null);
+    setActiveSectionId(null);
+    setError("");
+  }
 
   async function parseDocument(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setLoading(true);
+    setLoading("document");
     setError("");
     try {
-      const response = await fetch(apiEndpoint, {
+      const response = await fetch(apiEndpoint("documents", mode), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify(requestBody),
       });
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as { detail?: string } | null;
@@ -66,32 +88,104 @@ export default function Home() {
             : "Could not parse this document.",
       );
     } finally {
-      setLoading(false);
+      setLoading(null);
+    }
+  }
+
+  async function generateAnimation() {
+    setLoading("animation");
+    setError("");
+    try {
+      const response = await fetch(apiEndpoint("animations", mode), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { detail?: string } | null;
+        throw new Error(payload?.detail ?? `Request failed (${response.status})`);
+      }
+      const spec = (await response.json()) as RenderSpec;
+      if (!spec.storyboard_id || !Array.isArray(spec.scenes) || spec.scenes.length === 0) {
+        throw new Error("The backend returned an empty or invalid RenderSpec.");
+      }
+      window.sessionStorage.setItem("animate-agent-render-spec", JSON.stringify(spec));
+      window.location.assign("/player?spec=session");
+    } catch (reason) {
+      setError(
+        reason instanceof TypeError
+          ? "Could not reach the animation API. Check that both development servers are running, then retry."
+          : reason instanceof Error
+            ? reason.message
+            : `Could not generate an animation from this ${mode} input.`,
+      );
+      setLoading(null);
     }
   }
 
   return (
     <main>
       <header>
-        <p className="eyebrow">把世界画出来 · Milestone 1</p>
-        <h1>Documentation Parser</h1>
-        <p>Turn an official documentation page into a clean, inspectable DocumentIR.</p>
+        <p className="eyebrow">把世界画出来 · Source to animation</p>
+        <h1>Knowledge Movie Studio</h1>
+        <p>Search a question or read a public URL, then turn its sources into an interactive animation.</p>
       </header>
 
       <form onSubmit={parseDocument}>
-        <label htmlFor="documentation-url">Documentation URL</label>
-        <div className="formRow">
-          <input
-            id="documentation-url"
-            type="url"
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-            placeholder="https://docs.example.com/quickstart"
-            required
-          />
-          <button type="submit" disabled={loading}>
-            {loading ? "Parsing…" : "Parse Document"}
+        <div className="modeSwitch" aria-label="Source type">
+          <button
+            aria-pressed={mode === "url"}
+            className={mode === "url" ? "active" : ""}
+            onClick={() => selectMode("url")}
+            type="button"
+          >
+            URL
           </button>
+          <button
+            aria-pressed={mode === "query"}
+            className={mode === "query" ? "active" : ""}
+            onClick={() => selectMode("query")}
+            type="button"
+          >
+            问题 / Web Search
+          </button>
+        </div>
+        <label htmlFor="source-input">
+          {mode === "url" ? "Documentation URL" : "Question to research"}
+        </label>
+        <div className="formRow">
+          {mode === "url" ? (
+            <input
+              id="source-input"
+              type="url"
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+              placeholder="https://docs.example.com/quickstart"
+              required
+            />
+          ) : (
+            <textarea
+              id="source-input"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Ask a technical question to research"
+              required
+              rows={3}
+            />
+          )}
+          <div className="formActions">
+            <button type="submit" disabled={loading !== null}>
+              {loading === "document" ? "Resolving…" : "Inspect DocumentIR"}
+            </button>
+            <button
+              className="generateButton"
+              type="button"
+              disabled={loading !== null || !value.trim()}
+              onClick={generateAnimation}
+            >
+              {loading === "animation" ? "Generating…" : "生成动画"}
+            </button>
+          </div>
         </div>
       </form>
 

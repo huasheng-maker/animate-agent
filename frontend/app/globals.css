@@ -7,7 +7,7 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; }
-button, input { font: inherit; }
+button, input, textarea { font: inherit; }
 
 main {
   width: min(1080px, calc(100% - 40px));
@@ -28,10 +28,16 @@ form, .result {
 }
 
 label { display: block; margin-bottom: 10px; font-weight: 700; }
+.modeSwitch { display: inline-flex; gap: 6px; margin-bottom: 18px; padding: 4px; background: #edf2eb; border-radius: 12px; }
+.modeSwitch button { padding: 8px 12px; color: #526057; background: transparent; }
+.modeSwitch button.active { color: white; background: #16734a; }
 .formRow { display: flex; gap: 12px; }
-input { flex: 1; min-width: 0; padding: 14px 16px; border: 1px solid #bdc8be; border-radius: 10px; }
+.formActions { display: flex; gap: 10px; }
+input, textarea { flex: 1; min-width: 0; padding: 14px 16px; border: 1px solid #bdc8be; border-radius: 10px; }
+textarea { resize: vertical; }
 button { border: 0; border-radius: 10px; cursor: pointer; }
 form button { padding: 14px 22px; color: white; background: #17221c; font-weight: 700; }
+.generateButton { background: #16734a; }
 button:disabled { cursor: wait; opacity: 0.65; }
 .error { padding: 14px 18px; color: #8b241f; background: #fdecea; border-radius: 10px; }
 
@@ -51,6 +57,7 @@ img { max-width: 100%; height: auto; }
 @media (max-width: 700px) {
   main { padding: 36px 0; }
   .formRow { flex-direction: column; }
+  .formActions { flex-direction: column; }
   .browser { grid-template-columns: 1fr; }
   nav { border-right: 0; border-bottom: 1px solid #e2e7e1; padding: 0 0 18px; }
 }

@@ -1,0 +1,43 @@
+{
+  "document_id": "safe-document",
+  "title": "Safe title",
+  "source": {
+    "id": "safe-document",
+    "type": "web_page",
+    "title": "Safe title",
+    "url": "https://example.com/final",
+    "metadata": {
+      "content_format": "markdown"
+    },
+    "citations": []
+  },
+  "sources": [
+    {
+      "id": "safe-document",
+      "type": "web_page",
+      "title": "Safe title",
+      "url": "https://example.com/final",
+      "metadata": {
+        "content_format": "markdown"
+      },
+      "citations": []
+    }
+  ],
+  "sections": [
+    {
+      "id": "section-install",
+      "title": "Install",
+      "level": 1,
+      "blocks": [
+        {
+          "id": "section-install-block-1",
+          "type": "paragraph",
+          "text": "Run the safe command.",
+          "language": null,
+          "source_id": "safe-document",
+          "source_ref": null
+        }
+      ]
+    }
+  ]
+}

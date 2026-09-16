@@ -548,7 +548,12 @@ class Preset:
 PRESETS: tuple[Preset, ...] = (
     Preset("lane", ("vehicle", "obstacle"), 6, "一维通道上的避障：车、障碍、安全距离"),
     Preset("chain", ("node",), 8, "有向链路：ROS 节点 / API 调用链"),
-    Preset("hub", ("node", "endpoint"), 8, "星形拓扑：一个中心与若干叶子"),
+    Preset(
+        "hub",
+        ("node", "endpoint"),
+        8,
+        "星形拓扑：必须恰好一个 node 作中心，其他实体叶子使用 endpoint",
+    ),
     Preset("field", ("projectile",), 4, "二维场：坐标轴 + 抛体轨迹 + 矢量分解"),
     # Described as the last resort, not as the safe default. It used to read
     # "永远合法的兜底预设", and the model — optimising for "don't get rejected" —

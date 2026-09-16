@@ -1,0 +1,2 @@
+-r requirements.txt
+crawl4ai>=0.9.3,<0.10.0

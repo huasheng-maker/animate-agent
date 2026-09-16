@@ -272,6 +272,18 @@ def _check_preset(scene: StoryboardScene, where: str, issues: list[ValidationIss
             )
         )
 
+    if preset.name == "hub":
+        node_count = sum(obj.role == "node" for obj in scene.objects)
+        if node_count != 1:
+            issues.append(
+                ValidationIssue(
+                    "preset_role_count",
+                    f"{where}.objects",
+                    f"预设 `hub` 必须恰好有 1 个 node 作为中心，实际 {node_count} 个；"
+                    "其余实体叶子请使用 endpoint",
+                )
+            )
+
     body_count = sum(1 for obj in scene.objects if ROLE_TO_PRIMITIVE.get(obj.role) == "body")
     if body_count > preset.max_bodies:
         issues.append(

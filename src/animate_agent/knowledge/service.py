@@ -9,7 +9,7 @@ from animate_agent.config import load_knowledge_settings
 from animate_agent.documents.models import DocumentIR
 from animate_agent.knowledge.agent import KnowledgeAgent
 from animate_agent.knowledge.models import LessonIR
-from animate_agent.llm import LLMClient, load_llm_config
+from animate_agent.llm import LLMClient, require_llm_config
 
 DEFAULT_GENERATED_DIR = Path("data/generated")
 
@@ -25,7 +25,7 @@ async def generate_lesson(
     owns_client = False
     if agent is None:
         settings = load_knowledge_settings()
-        llm = LLMClient(load_llm_config())
+        llm = LLMClient(require_llm_config())
         agent = KnowledgeAgent(
             llm,
             max_retries=settings.max_retries,

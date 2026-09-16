@@ -7,6 +7,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -33,6 +34,10 @@ class LLMBudgetExhaustedError(RuntimeError):
     """
 
 
+class MissingLLMKeyError(RuntimeError):
+    """The configured LLM endpoint has no credential available."""
+
+
 @dataclass(frozen=True)
 class LLMConfig:
     """Connection settings for an OpenAI-compatible chat-completions endpoint."""
@@ -40,6 +45,7 @@ class LLMConfig:
     base_url: str
     api_key: str
     model: str
+    timeout_seconds: float = 600.0
 
 
 class LLMClient:
@@ -48,7 +54,11 @@ class LLMClient:
     def __init__(self, config: LLMConfig, *, client: httpx.AsyncClient | None = None) -> None:
         self._config = config
         self._owns_client = client is None
-        self._client = client or httpx.AsyncClient(timeout=httpx.Timeout(120.0))
+        self._client = client or httpx.AsyncClient(timeout=httpx.Timeout(config.timeout_seconds))
+
+    def _uses_moonshot_api(self) -> bool:
+        hostname = urlsplit(self._config.base_url).hostname or ""
+        return hostname.lower() == "api.moonshot.cn" or self._config.model.startswith("kimi-")
 
     async def chat(
         self,
@@ -61,9 +71,23 @@ class LLMClient:
         payload: dict[str, Any] = {
             "model": self._config.model,
             "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
         }
+        if self._uses_moonshot_api():
+            # Kimi uses max_completion_tokens and model/mode-specific sampling
+            # constraints. Keep that compatibility inside the transport boundary
+            # so agent code remains provider-free.
+            payload["max_completion_tokens"] = max_tokens
+            if self._config.model == "kimi-k2.6":
+                # Schema generation benefits from concise final JSON, not a
+                # multi-minute hidden reasoning pass. K2.6 explicitly supports
+                # disabling thinking; models that require thinking are left alone.
+                payload["temperature"] = 0.6
+                payload["thinking"] = {"type": "disabled"}
+            else:
+                payload["temperature"] = 1.0
+        else:
+            payload["temperature"] = temperature
+            payload["max_tokens"] = max_tokens
         headers = {"Authorization": f"Bearer {self._config.api_key}"}
         url = self._config.base_url.rstrip("/") + "/chat/completions"
 
@@ -141,7 +165,31 @@ def load_llm_config() -> LLMConfig:
     module never mutates the process environment as a side effect.
     """
     load_env_file(ENV_FILE)
-    base_url = os.environ.get("DEEPSEEK_BASE", "https://api.deepseek.com")
-    api_key = os.environ.get("DEEPSEEK_KEY", "")
-    model = os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-pro")
-    return LLMConfig(base_url=base_url, api_key=api_key, model=model)
+    kimi_key = os.environ.get("KIMI_KEY", "")
+    if kimi_key:
+        base_url = os.environ.get("KIMI_BASE", "https://api.moonshot.cn/v1")
+        api_key = kimi_key
+        model = os.environ.get("KIMI_MODEL", "kimi-k2.6")
+    else:
+        base_url = os.environ.get("DEEPSEEK_BASE", "https://api.deepseek.com")
+        api_key = os.environ.get("DEEPSEEK_KEY", "")
+        model = os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-pro")
+    timeout_seconds = float(os.environ.get("LLM_TIMEOUT_SECONDS", "600"))
+    return LLMConfig(
+        base_url=base_url,
+        api_key=api_key,
+        model=model,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+def require_llm_config() -> LLMConfig:
+    """Load LLM settings and fail before network work when the key is absent."""
+
+    config = load_llm_config()
+    if not config.api_key:
+        raise MissingLLMKeyError(
+            "未配置 KIMI_KEY 或 DEEPSEEK_KEY，无法调用 Knowledge/Storyboard Agent。"
+            "请在仓库 .env 或进程环境变量中设置后重试。"
+        )
+    return config

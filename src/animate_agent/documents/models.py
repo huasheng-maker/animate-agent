@@ -1,8 +1,12 @@
-"""Validated intermediate representation shared by all document adapters."""
+"""Validated intermediate representation built from SourceDocument objects."""
+
+from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
+
+from animate_agent.sources.models import SourceCitation
 
 
 class DocumentSource(BaseModel):
@@ -10,8 +14,12 @@ class DocumentSource(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    type: Literal["url", "file"]
+    id: str | None = None
+    type: Literal["url", "web_search", "web_page", "text", "file", "pdf"]
+    title: str | None = None
     url: str | None = None
+    metadata: dict[str, JsonValue] = Field(default_factory=dict)
+    citations: list[SourceCitation] = Field(default_factory=list)
 
 
 class DocumentBlock(BaseModel):
@@ -23,6 +31,7 @@ class DocumentBlock(BaseModel):
     type: Literal["paragraph", "code", "list", "image"]
     text: str
     language: str | None = None
+    source_id: str | None = None
     source_ref: str | None = None
 
 
@@ -45,4 +54,13 @@ class DocumentIR(BaseModel):
     document_id: str
     title: str
     source: DocumentSource
+    sources: list[DocumentSource] = Field(default_factory=list)
     sections: list[Section] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def populate_sources(self) -> DocumentIR:
+        """Keep the legacy primary source while exposing complete provenance."""
+
+        if not self.sources:
+            self.sources = [self.source]
+        return self

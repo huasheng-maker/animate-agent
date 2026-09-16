@@ -8,7 +8,7 @@ from pathlib import Path
 from animate_agent.config import load_animation_settings, load_storyboard_settings
 from animate_agent.documents.models import DocumentIR
 from animate_agent.knowledge.models import LessonIR
-from animate_agent.llm import LLMClient, load_llm_config
+from animate_agent.llm import LLMClient, require_llm_config
 from animate_agent.storyboard.agent import StoryboardAgent
 from animate_agent.storyboard.models import StoryboardIR
 from animate_agent.storyboard.validation import StoryboardLimits
@@ -42,7 +42,7 @@ async def generate_storyboard(
     if agent is None:
         storyboard_settings = load_storyboard_settings()
         animation_settings = load_animation_settings()
-        llm = LLMClient(load_llm_config())
+        llm = LLMClient(require_llm_config())
         agent = StoryboardAgent(
             llm,
             limits=build_limits(),

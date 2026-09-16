@@ -6,6 +6,7 @@ import asyncio
 import importlib
 import logging
 import os
+from collections.abc import Awaitable, Callable
 from time import monotonic
 from typing import Any, cast
 from uuid import uuid4
@@ -16,6 +17,7 @@ from animate_agent.ingestion.exceptions import (
     CrawlTimeout,
     IngestionError,
     NetworkError,
+    RobotsDenied,
 )
 from animate_agent.ingestion.models import (
     DocumentInput,
@@ -26,9 +28,14 @@ from animate_agent.ingestion.models import (
 )
 from animate_agent.ingestion.security import URLSecurityPolicy
 from animate_agent.ingestion.web.contracts import CrawlInvoker, CrawlSnapshot
+from animate_agent.ingestion.web.http_fallback import fetch_static_snapshot
 from animate_agent.ingestion.web.normalizer import normalize_snapshot
 
 logger = logging.getLogger(__name__)
+
+StaticFallback = Callable[
+    [UrlInput, WebIngestionConfig, URLSecurityPolicy], Awaitable[CrawlSnapshot]
+]
 
 
 def _as_dict(value: Any) -> dict[str, Any]:
@@ -192,12 +199,14 @@ class Crawl4AIWebDocumentAdapter:
         *,
         security_policy: URLSecurityPolicy | None = None,
         invoker: CrawlInvoker | None = None,
+        static_fallback: StaticFallback = fetch_static_snapshot,
     ) -> None:
         self.config = config or WebIngestionConfig()
         self.security_policy = security_policy or URLSecurityPolicy(
             allowed_domains=self.config.allowed_domains
         )
         self._invoker = invoker or Crawl4AIInvoker(self.security_policy)
+        self._static_fallback = static_fallback
 
     def supports(self, source: DocumentInput) -> bool:
         return isinstance(source, (UrlInput, RawHtmlInput))
@@ -218,10 +227,33 @@ class Crawl4AIWebDocumentAdapter:
         try:
             snapshot = await self._invoker.crawl(crawl_source, self.config)
             if not snapshot.success:
-                raise CrawlFailed(
-                    "The page could not be crawled successfully.",
-                    detail=snapshot.error_message,
-                )
+                if snapshot.error_message == "Access denied by robots.txt":
+                    raise RobotsDenied(
+                        "Automated crawling was denied by the robots policy. "
+                        "Use a permitted public raw/source URL for the same document.",
+                        detail=snapshot.error_message,
+                    )
+                if isinstance(crawl_source, UrlInput):
+                    try:
+                        snapshot = await self._static_fallback(
+                            crawl_source, self.config, self.security_policy
+                        )
+                    except IngestionError as exc:
+                        detail = "; ".join(
+                            item
+                            for item in (snapshot.error_message, exc.detail or str(exc))
+                            if item
+                        )
+                        raise CrawlFailed(
+                            "The page could not be read by either the browser or the safe "
+                            "static fallback.",
+                            detail=detail,
+                        ) from exc
+                else:
+                    raise CrawlFailed(
+                        "The page could not be crawled successfully.",
+                        detail=snapshot.error_message,
+                    )
             if source.kind == "url" and snapshot.final_url:
                 await self.security_policy.validate(snapshot.final_url)
             return normalize_snapshot(
