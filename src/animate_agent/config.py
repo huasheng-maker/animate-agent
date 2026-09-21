@@ -9,6 +9,8 @@ from typing import Any, cast
 import yaml  # type: ignore[import-untyped]
 from pydantic import BaseModel, ConfigDict, Field
 
+from animate_agent.paths import CONFIG_PATH
+
 
 class KnowledgeSettings(BaseModel):
     """Tunable parameters for the Knowledge Agent."""
@@ -50,7 +52,7 @@ class StoryboardSettings(BaseModel):
     temperature: float = Field(default=0.3, ge=0.0, le=2.0)
 
 
-DEFAULT_CONFIG_PATH = Path("config/app.example.yaml")
+DEFAULT_CONFIG_PATH = CONFIG_PATH
 
 
 def _read_yaml(path: Path) -> dict[str, Any]:

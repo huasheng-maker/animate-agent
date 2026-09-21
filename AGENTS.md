@@ -2,8 +2,7 @@
 
 # AGENTS.md
 
-控制 Codex 用量：先定点检查再修改；最多读取必要代码片段；命令输出不超过 150 行；批量执行互不依赖的检查；真实外网和浏览器验收只运行一次；完成一个里程碑后停止并生成交接摘要
-## Scope and priority
+控制 Codex 用量：先定点检查再修改；最多读取必要代码片段；命令输出不超过 150 行
 
 These rules apply to work in this repository.
 

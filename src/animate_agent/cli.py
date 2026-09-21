@@ -21,15 +21,17 @@ from pathlib import Path
 
 import httpx
 
+from animate_agent.animation_ir.compiler import compile_storyboard_render_spec
 from animate_agent.documents.models import DocumentIR
 from animate_agent.documents.service import ingest_file
 from animate_agent.knowledge.models import LessonIR
 from animate_agent.knowledge.service import generate_lesson
 from animate_agent.llm import LLMBudgetExhaustedError, load_llm_config
-from animate_agent.rendering.layout import LayoutError, layout_storyboard
+from animate_agent.rendering.layout import LayoutError
 from animate_agent.rendering.legacy import FROZEN_TEMPLATES, scene_to_render_spec
 from animate_agent.storyboard.models import StoryboardIR
 from animate_agent.storyboard.service import DEFAULT_GENERATED_DIR, generate_storyboard
+from animate_agent.paths import STORYBOARD_SAMPLES_DIR
 
 EXIT_OK = 0
 EXIT_GENERATION_FAILED = 1
@@ -38,7 +40,7 @@ EXIT_MISSING_KEY = 3
 
 #: Hand-written StoryboardIR fixtures. They are the validator's clean samples and
 #: the layout layer's reference input — the picture a preset has to reproduce.
-SAMPLES_DIR = Path(__file__).resolve().parents[2] / "data" / "samples" / "storyboards"
+SAMPLES_DIR = STORYBOARD_SAMPLES_DIR
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -175,7 +177,7 @@ async def _run(args: argparse.Namespace) -> int:
         return EXIT_OK
 
     try:
-        spec = layout_storyboard(storyboard)
+        spec = compile_storyboard_render_spec(storyboard)
     except LayoutError as exc:
         # The storyboard is already on disk and is the only way to find out why
         # the layout refused. Say so rather than leaving a bare traceback.
@@ -235,7 +237,7 @@ def _render_sample(args: argparse.Namespace) -> int:
 
     storyboard = StoryboardIR.model_validate_json(source.read_text(encoding="utf-8"))
     try:
-        spec = layout_storyboard(storyboard)
+        spec = compile_storyboard_render_spec(storyboard)
     except LayoutError as exc:
         print(f"布局失败: {exc}", file=sys.stderr)
         return EXIT_GENERATION_FAILED

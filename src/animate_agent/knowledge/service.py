@@ -5,13 +5,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from animate_agent.animation.artifacts import current_run_directory
 from animate_agent.config import load_knowledge_settings
 from animate_agent.documents.models import DocumentIR
 from animate_agent.knowledge.agent import KnowledgeAgent
 from animate_agent.knowledge.models import LessonIR
 from animate_agent.llm import LLMClient, require_llm_config
+from animate_agent.paths import GENERATED_DIR
 
-DEFAULT_GENERATED_DIR = Path("data/generated")
+DEFAULT_GENERATED_DIR = GENERATED_DIR
 
 
 async def generate_lesson(
@@ -37,6 +39,8 @@ async def generate_lesson(
         owns_client = True
     try:
         lesson = await agent.generate(document)
+        if current_run_directory() is not None:
+            return lesson
         output_dir.mkdir(parents=True, exist_ok=True)
         destination = output_dir / f"{lesson.lesson_id}.json"
         destination.write_text(

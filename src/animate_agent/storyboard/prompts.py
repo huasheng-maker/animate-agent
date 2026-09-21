@@ -16,6 +16,7 @@ from pydantic.fields import FieldInfo
 from animate_agent.knowledge.models import LessonIR
 from animate_agent.rendering.registry import render_vocabulary
 from animate_agent.storyboard.models import (
+    StoryboardClaim,
     StoryboardControl,
     StoryboardObject,
     StoryboardScene,
@@ -28,12 +29,17 @@ from animate_agent.storyboard.models import (
 _CONSTRAINED_FIELDS: tuple[tuple[str, type[BaseModel], str], ...] = (
     ("scene.id", StoryboardScene, "id"),
     ("scene.teaching_goal", StoryboardScene, "teaching_goal"),
+    ("scene.learning_question", StoryboardScene, "learning_question"),
+    ("scene.claims", StoryboardScene, "claims"),
     ("scene.lesson_scene_ids", StoryboardScene, "lesson_scene_ids"),
     ("scene.objects", StoryboardScene, "objects"),
     ("scene.controls", StoryboardScene, "controls"),
     ("scene.renderer_hint", StoryboardScene, "renderer_hint"),
     ("object.id", StoryboardObject, "id"),
     ("object.label", StoryboardObject, "label"),
+    ("claim.id", StoryboardClaim, "id"),
+    ("claim.text", StoryboardClaim, "text"),
+    ("claim.source_refs", StoryboardClaim, "source_refs"),
     ("step.id", StoryboardStep, "id"),
     ("step.title", StoryboardStep, "title"),
     ("step.description", StoryboardStep, "description"),
@@ -112,6 +118,12 @@ JSON 结构如下（不要输出 JSON 以外的任何文字）：
       "id": "scene-1",
       "scene_type": "预设名，见下方词表",
       "teaching_goal": "这一幕要让学生看懂什么（一句话）",
+      "learning_question": "这一幕要动态回答的具体问题",
+      "visual_pattern": "从下方允许值中选择",
+      "claims": [
+        {"id": "claim-1", "text": "这一幕呈现的原文事实",
+         "source_refs": ["section-2-block-1"]}
+      ],
       "lesson_scene_ids": ["被覆盖的课程场景 id，1~2 个"],
       "objects": [
         {
@@ -159,6 +171,11 @@ JSON 结构如下（不要输出 JSON 以外的任何文字）：
   不多不少。一个 storyboard 场景可以覆盖 1~2 个课程场景（内容单薄的相邻场景合并成一幕），
   但**不允许新增**课程里没有的场景。
 - **节拍数量**：每个场景写 3~7 个 `steps`。
+- **视觉推理**：每幕填写 `learning_question`、`visual_pattern` 和至少一个 `claims`。
+  根据 KnowledgeIR 中的过程、状态、因果、比较、空间或时间关系选视觉模式，
+  不要把所有主题都降级成同一种卡片/流程模板。
+- **事实绑定**：`claims` 只写 LessonIR/KnowledgeIR 中有来源的事实，每条 claim 的
+  `source_refs` 必须直接复制对应语义项或课程场景的来源 id。
 - **每个节拍必须有视觉变化**：至少写一个 `highlights`，或至少改一个 `object_states`。
   只讲文字、画面上什么都没动的节拍不是节拍。
 - **关键词覆盖**：每个场景各节拍的 `key_points` 合起来，必须**逐字**包含它所覆盖的
@@ -196,6 +213,57 @@ def build_storyboard_prompt(lesson: LessonIR, *, allowed_renderers: tuple[str, .
         "整体学习目标：",
     ]
     lines.extend(f"- {objective}" for objective in lesson.learning_objectives)
+    lines.append("")
+
+    lines.append("## 结构化知识（用于选择视觉模式，不得遗漏关系方向和步骤顺序）")
+    for entity in lesson.entities:
+        lines.append(
+            f"- 实体 {entity.name}（{entity.kind}）：{entity.description}；"
+            f"来源：{'、'.join(entity.source_refs)}"
+        )
+    for concept in lesson.concepts:
+        lines.append(
+            f"- 概念 {concept.name}：{concept.definition}；"
+            f"来源：{'、'.join(concept.source_refs)}"
+        )
+    for relationship in lesson.relationships:
+        lines.append(
+            f"- 关系 {relationship.source} --{relationship.relation}--> "
+            f"{relationship.target}：{relationship.explanation}；"
+            f"来源：{'、'.join(relationship.source_refs)}"
+        )
+    for process in lesson.processes:
+        lines.append(f"- 过程 {process.name}（{process.purpose}）：")
+        for step in process.steps:
+            lines.append(
+                f"  {step.order}. {step.title}：{step.description}；"
+                f"来源：{'、'.join(step.source_refs)}"
+            )
+    for state in lesson.states:
+        transitions = "、".join(state.transitions_to) or "无"
+        lines.append(
+            f"- 状态 {state.entity}/{state.name}：{state.description}；转移到：{transitions}；"
+            f"来源：{'、'.join(state.source_refs)}"
+        )
+    for example in lesson.examples:
+        lines.append(
+            f"- 示例 {example.title}：{example.description}；"
+            f"来源：{'、'.join(example.source_refs)}"
+        )
+    for equation in lesson.equations:
+        variables = "、".join(
+            f"{name}={meaning}" for name, meaning in equation.variables.items()
+        )
+        lines.append(
+            f"- 公式 {equation.expression}：{equation.explanation}；"
+            f"变量：{variables or '无'}；来源：{'、'.join(equation.source_refs)}"
+        )
+    for comparison in lesson.comparisons:
+        lines.append(
+            f"- 比较 {comparison.left} vs {comparison.right}："
+            f"{'、'.join(comparison.dimensions)}；结论：{comparison.conclusion}；"
+            f"来源：{'、'.join(comparison.source_refs)}"
+        )
     lines.append("")
 
     lines.append("## 课程场景（必须全部覆盖）")

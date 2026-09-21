@@ -1109,10 +1109,18 @@ r2 写的是 `300` 与 `110`——都在 `STAGE_RANGES` 里。**词表说清楚�
 ### 复现命令
 
 ```powershell
+$edge = if ($env:EDGE_BROWSER_PATH) {
+  $env:EDGE_BROWSER_PATH
+} else {
+  (Get-Command msedge.exe -ErrorAction Stop).Source
+}
+if (-not $env:ANIMATE_AGENT_SPEC_URL) {
+  throw "请先把 ANIMATE_AGENT_SPEC_URL 设为待验收的播放器 URL"
+}
 .\.venv\Scripts\python.exe -m http.server 8000      # 仓库根目录
-& "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --headless=new --disable-gpu `
+& $edge --headless=new --disable-gpu `
   --virtual-time-budget=8000 --window-size=1600,1000 --screenshot=out.png `
-  "http://127.0.0.1:8000/frontend/player/index.html?spec=/data/generated/r2-ros_pub_sub/render-storyboard-lesson-1b12b316f87f0ac0.json"
+  $env:ANIMATE_AGENT_SPEC_URL
 ```
 
 **这条路本身是这一节最值得留下的东西**：在它之前，「看一眼画面」只能靠人，而且看过就没了；

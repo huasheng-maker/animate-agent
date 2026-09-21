@@ -20,6 +20,34 @@ KNOWLEDGE_SYSTEM_PROMPT = """你是一位资深课程设计师。
   "subject": "学科/主题",
   "summary": "全文一句话摘要",
   "learning_objectives": ["整体学习目标1", "整体学习目标2", "..."],
+  "entities": [
+    {"name": "实体名", "kind": "类别", "description": "含义", "source_refs": ["block-id"]}
+  ],
+  "concepts": [
+    {"name": "概念名", "definition": "完整定义", "source_refs": ["block-id"]}
+  ],
+  "relationships": [
+    {"source": "A", "target": "B", "relation": "causes", "explanation": "关系说明",
+     "source_refs": ["block-id"]}
+  ],
+  "processes": [
+    {"name": "过程名", "purpose": "目的", "source_refs": ["block-id"], "steps": [
+      {"order": 1, "title": "步骤名", "description": "发生什么", "source_refs": ["block-id"]}
+    ]}
+  ],
+  "states": [
+    {"entity": "实体名", "name": "状态名", "description": "状态含义",
+     "transitions_to": ["下一状态"], "source_refs": ["block-id"]}
+  ],
+  "examples": [{"title": "例子名", "description": "例子及其说明", "source_refs": ["block-id"]}],
+  "equations": [
+    {"expression": "公式", "explanation": "公式含义与适用条件",
+     "variables": {"x": "变量含义"}, "source_refs": ["block-id"]}
+  ],
+  "comparisons": [
+    {"left": "对象A", "right": "对象B", "dimensions": ["比较维度"],
+     "conclusion": "比较结论", "source_refs": ["block-id"]}
+  ],
   "scenes": [
     {
       "title": "场景标题",
@@ -33,6 +61,12 @@ KNOWLEDGE_SYSTEM_PROMPT = """你是一位资深课程设计师。
 
 要求：
 - learning_objectives 写 2~4 条。
+- 先提取适合视觉表达的语义结构，再规划 scenes。`entities`、`concepts`、`relationships`、
+  `processes`、`states`、`examples`、`equations`、`comparisons` 按原文实际内容填写；
+  不适用的类别写空数组，禁止为了填满字段而编造。
+- 每一个语义项和 process step 都必须带非空 `source_refs`，只引用支撑该项的真实 block id。
+- 不要把定义、过程、因果、比较、公式压缩成关键词。保留过程步骤顺序、关系方向、
+  公式变量/条件、表格比较维度、代码/图示的用途，让下游能据此选择不同视觉结构。
 - scenes 的数量由你根据文档内容复杂度自主决定：简单内容 1~2 个，
   一般 3~5 个，复杂内容 6~8 个；按教学顺序组织、从易到难，宁少勿滥。
 - 每个场景必须覆盖一个「完整的语义单元」——一个概念、一个步骤或一条注意事项。
@@ -67,7 +101,12 @@ def build_knowledge_prompt(document: DocumentIR) -> str:
     for section in document.sections:
         lines.append(f"## [{section.id}] {section.title}")
         for block in section.blocks:
-            lines.append(f"  [{block.id}] {block.text}")
+            details = [f"type={block.type}"]
+            if block.language:
+                details.append(f"language={block.language}")
+            if block.caption:
+                details.append(f"caption={block.caption}")
+            lines.append(f"  [{block.id}; {'; '.join(details)}] {block.text}")
         lines.append("")
     lines.append("</untrusted_source_content>")
     return "\n".join(lines)

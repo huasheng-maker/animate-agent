@@ -1,6 +1,6 @@
 """Validated intermediate representation produced by the Storyboard Agent.
 
-Node in the pipeline: `LessonIR -> [Storyboard Agent] -> StoryboardIR -> RenderSpec`.
+Node in the pipeline: `evidence/lesson -> Storyboard Agent -> StoryboardIR -> Animation Compiler`.
 
 The contract here is deliberately **semantic**: objects carry roles and labels,
 never coordinates. Geometry is assigned afterwards by the deterministic layout
@@ -23,6 +23,26 @@ ID_PATTERN = r"^[a-z][a-z0-9_-]*$"
 # rendering registry (`storyboard/validation.py`); the values are intentionally
 # open, because a prop's unit and range are a rendering concern.
 PropValue = str | int | float | bool
+
+VisualPattern = Literal[
+    "flow",
+    "state_transition",
+    "causal_chain",
+    "comparison",
+    "spatial_relation",
+    "timeline",
+    "system_process",
+]
+
+
+class StoryboardClaim(BaseModel):
+    """One evidence-backed fact that a scene is allowed to teach visually."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(min_length=1, max_length=48, pattern=ID_PATTERN)
+    text: str = Field(min_length=4, max_length=240)
+    source_refs: list[str] = Field(min_length=1, max_length=12)
 
 
 class StoryboardObject(BaseModel):
@@ -125,9 +145,15 @@ class StoryboardScene(BaseModel):
     id: str = Field(min_length=1, max_length=48, pattern=ID_PATTERN)
     scene_type: str = Field(min_length=1, max_length=32)
     teaching_goal: str = Field(min_length=4, max_length=80)
+    # Query-first storyboards state the question and evidence directly. Defaults
+    # preserve reviewed LessonIR-era fixtures while generation-mode validation
+    # requires these fields for intent-driven output.
+    learning_question: str = Field(default="", max_length=160)
+    visual_pattern: VisualPattern | None = None
+    claims: list[StoryboardClaim] = Field(default_factory=list, max_length=12)
     # Which LessonIR scenes this storyboard scene covers. 1~2, and the union
     # across all scenes must cover every LessonScene.
-    lesson_scene_ids: list[str] = Field(min_length=1, max_length=2)
+    lesson_scene_ids: list[str] = Field(default_factory=list, max_length=2)
     objects: list[StoryboardObject] = Field(min_length=1, max_length=12)
     steps: list[StoryboardStep] = Field(min_length=1, max_length=12)
     controls: list[StoryboardControl] = Field(default_factory=list, max_length=6)
@@ -146,4 +172,5 @@ class StoryboardIR(BaseModel):
     title: str
     subject: str
     eyebrow: str = ""
+    learning_intent: str = ""
     scenes: list[StoryboardScene] = Field(min_length=1, max_length=10)

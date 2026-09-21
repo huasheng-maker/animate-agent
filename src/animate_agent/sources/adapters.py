@@ -23,6 +23,8 @@ from animate_agent.ingestion.web.http_fallback import fetch_static_snapshot
 from animate_agent.sources.models import (
     FileSourceInput,
     QuerySourceInput,
+    SourceAsset,
+    SourceBlock,
     SourceCitation,
     SourceDocument,
     TextSourceInput,
@@ -63,12 +65,50 @@ class TextAdapter:
         ]
 
 
-def _document_as_markdown(path: Path) -> tuple[str, str, str]:
+def _document_as_markdown(
+    path: Path,
+) -> tuple[str, str, str, tuple[SourceBlock, ...], tuple[SourceAsset, ...]]:
     parsed = parse_file(path)
     lines: list[str] = []
+    source_blocks: list[SourceBlock] = []
+    assets: list[SourceAsset] = []
     for section in parsed.sections:
-        lines.append(f"{'#' * section.level} {section.title}")
+        if section.title:
+            lines.append(f"{'#' * section.level} {section.title}")
+            source_blocks.append(
+                SourceBlock(
+                    id=section.id,
+                    type="heading",
+                    text=section.title,
+                    level=section.level,
+                )
+            )
         for block in section.blocks:
+            block_type = block.type
+            asset_id: str | None = None
+            if block_type in {"image", "diagram"} and block.source_ref:
+                asset_id = f"asset-{block.id}"
+                assets.append(
+                    SourceAsset(
+                        id=asset_id,
+                        type=block_type,
+                        url=block.source_ref,
+                        alt_text=block.text or None,
+                        title=block.caption,
+                    )
+                )
+            source_blocks.append(
+                SourceBlock(
+                    id=block.id,
+                    type=block_type,
+                    text=block.text,
+                    language=block.language,
+                    url=block.source_ref,
+                    caption=block.caption,
+                    asset_id=asset_id,
+                    metadata=dict(block.metadata),
+                )
+            )
             if block.type == "code":
                 lines.extend((f"```{block.language or ''}", block.text, "```"))
             elif block.type == "list":
@@ -81,13 +121,13 @@ def _document_as_markdown(path: Path) -> tuple[str, str, str]:
     content = "\n".join(lines).strip()
     if not content:
         raise ValueError(f"The file contains no readable content: {path}")
-    return parsed.document_id, parsed.title, content
+    return parsed.document_id, parsed.title, content, tuple(source_blocks), tuple(assets)
 
 
 class FileAdapter:
     def resolve_sync(self, source: FileSourceInput) -> list[SourceDocument]:
         path = source.path.expanduser().resolve()
-        document_id, title, content = _document_as_markdown(path)
+        document_id, title, content, blocks, assets = _document_as_markdown(path)
         extension = path.suffix.lower()
         return [
             SourceDocument(
@@ -95,6 +135,8 @@ class FileAdapter:
                 source_type="pdf" if extension == ".pdf" else "file",
                 title=title,
                 content=content,
+                blocks=blocks,
+                assets=assets,
                 metadata={
                     "content_format": "markdown",
                     "file_name": path.name,

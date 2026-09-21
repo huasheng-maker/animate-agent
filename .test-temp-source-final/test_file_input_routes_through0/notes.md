@@ -1,3 +1,0 @@
-# Notes
-
-A local fact.

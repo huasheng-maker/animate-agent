@@ -5,10 +5,11 @@ from __future__ import annotations
 import hashlib
 import re
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, Literal, cast
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, Tag
+from pydantic import JsonValue
 
 from animate_agent.documents.models import DocumentBlock, DocumentIR, DocumentSource, Section
 
@@ -20,7 +21,7 @@ try:
 except ImportError:  # pragma: no cover - exercised only in minimal installations
     ReadabilityDocument = None
 
-REMOVED_TAGS = ("script", "style", "nav", "footer", "aside", "noscript", "template")
+REMOVED_TAGS = ("script", "style", "nav", "footer", "noscript", "template")
 NOISE_SELECTORS = (
     "[role='navigation']",
     "[role='complementary']",
@@ -34,11 +35,37 @@ NOISE_SELECTORS = (
     "[class*='toc' i]",
     "[id*='toc' i]",
 )
-CONTENT_TAGS = ("h1", "h2", "h3", "h4", "h5", "h6", "p", "pre", "ul", "ol", "img")
+CONTENT_TAGS = (
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "p",
+    "pre",
+    "ul",
+    "ol",
+    "img",
+    "blockquote",
+    "table",
+    "figure",
+    "math",
+    "svg",
+    "aside",
+    "details",
+)
 
 
 def _clean_text(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip()
+
+
+def _class_names(element: Tag) -> list[str]:
+    value = element.get("class")
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str)]
 
 
 def _slug(value: str) -> str:
@@ -108,19 +135,93 @@ def _blocks_from_element(element: Tag, block_id: str, base_url: str) -> list[Doc
         text = (code or element).get_text("\n", strip=True)
         if not text:
             return []
-        raw_classes = (code or element).get("class")
-        classes = raw_classes if isinstance(raw_classes, list) else []
+        classes = _class_names(code or element)
         language = next(
             (item.split("language-", 1)[1] for item in classes if item.startswith("language-")),
             None,
         )
+        block_type: Literal["equation", "code"] = (
+            "equation" if language in {"math", "latex", "tex"} else "code"
+        )
         return [
             DocumentBlock(
                 id=block_id,
-                type="code",
+                type=block_type,
                 text=text,
                 language=language,
                 source_ref=source_ref,
+            )
+        ]
+    if element.name == "math":
+        text = _clean_text(element.get_text(" ", strip=True))
+        if not text:
+            text = _clean_text(str(element))
+        return [
+            DocumentBlock(
+                id=block_id,
+                type="equation",
+                text=text,
+                language="mathml",
+                source_ref=source_ref,
+            )
+        ] if text else []
+    if element.name == "blockquote":
+        text = _clean_text(element.get_text(" ", strip=True))
+        return [DocumentBlock(id=block_id, type="quote", text=text)] if text else []
+    if element.name in {"aside", "details"}:
+        text = _clean_text(element.get_text(" ", strip=True))
+        class_text = " ".join(_class_names(element))
+        return [
+            DocumentBlock(
+                id=block_id,
+                type="callout",
+                text=text,
+                metadata={"kind": class_text or element.name},
+                source_ref=source_ref,
+            )
+        ] if text else []
+    if element.name == "table":
+        rows: list[list[str]] = []
+        for row in element.find_all("tr"):
+            cells = [
+                _clean_text(cell.get_text(" ", strip=True))
+                for cell in row.find_all(("th", "td"))
+            ]
+            if cells:
+                rows.append(cells)
+        if not rows:
+            return []
+        text = "\n".join(" | ".join(cells) for cells in rows)
+        return [
+            DocumentBlock(
+                id=block_id,
+                type="table",
+                text=text,
+                metadata={"rows": cast(JsonValue, rows)},
+                source_ref=source_ref,
+            )
+        ]
+    if element.name in {"figure", "svg"}:
+        image = element.find("img") if element.name == "figure" else None
+        raw_src = image.get("src") if image is not None else None
+        src = urljoin(base_url, raw_src) if isinstance(raw_src, str) and raw_src else None
+        caption_node = element.find("figcaption") if element.name == "figure" else None
+        caption = _clean_text(caption_node.get_text(" ", strip=True)) if caption_node else None
+        alt = image.get("alt") if image is not None else None
+        text = _clean_text(alt if isinstance(alt, str) else caption or "diagram")
+        class_text = " ".join(_class_names(element))
+        kind: Literal["diagram", "image"] = (
+            "diagram"
+            if element.name == "svg" or "diagram" in class_text.lower()
+            else "image"
+        )
+        return [
+            DocumentBlock(
+                id=block_id,
+                type=kind,
+                text=text,
+                caption=caption,
+                source_ref=src or source_ref,
             )
         ]
     if element.name in {"ul", "ol"}:
@@ -143,8 +244,8 @@ def _blocks_from_element(element: Tag, block_id: str, base_url: str) -> list[Doc
             for offset, item in enumerate(items)
         ]
     if element.name == "img":
-        src = element.get("src")
-        if not isinstance(src, str) or not src:
+        image_src = element.get("src")
+        if not isinstance(image_src, str) or not image_src:
             return []
         alt = element.get("alt")
         return [
@@ -152,7 +253,7 @@ def _blocks_from_element(element: Tag, block_id: str, base_url: str) -> list[Doc
                 id=block_id,
                 type="image",
                 text=_clean_text(alt if isinstance(alt, str) else ""),
-                source_ref=urljoin(base_url, src),
+                source_ref=urljoin(base_url, image_src),
             )
         ]
     return []

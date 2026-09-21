@@ -5,14 +5,25 @@ from __future__ import annotations
 import hashlib
 import re
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
+from pydantic import JsonValue
 
 from animate_agent.documents.models import DocumentBlock, DocumentIR, DocumentSource, Section
 
-BlockKind = Literal["paragraph", "code", "list", "image"]
+BlockKind = Literal[
+    "paragraph",
+    "code",
+    "equation",
+    "table",
+    "image",
+    "diagram",
+    "list",
+    "quote",
+    "callout",
+]
 
 MARKDOWN_EXTENSIONS = frozenset({".md", ".markdown", ".txt"})
 SUPPORTED_EXTENSIONS = frozenset({".pptx", ".docx", ".pdf"}) | MARKDOWN_EXTENSIONS
@@ -33,9 +44,50 @@ _NUMBERED_HEADING_RE = re.compile(
 _PLAIN_HEADING_MAX_LENGTH = 40
 _TITLE_MAX_LENGTH = 60
 
+_HUGO_COMMENT_RE = re.compile(
+    r"\{\{[<%]\s*comment\s*[>%]\}\}.*?\{\{[<%]\s*/comment\s*[>%]\}\}",
+    re.DOTALL | re.IGNORECASE,
+)
+_HUGO_TOOLTIP_RE = re.compile(
+    r"\{\{[<%]\s*glossary_tooltip\s+(?P<attrs>.*?)\s*[>%]\}\}",
+    re.DOTALL | re.IGNORECASE,
+)
+_HUGO_HEADING_RE = re.compile(
+    r"\{\{%\s*heading\s+[\"'](?P<slug>[^\"']+)[\"']\s*%\}\}",
+    re.IGNORECASE,
+)
+_HUGO_SHORTCODE_RE = re.compile(r"\{\{[<%].*?[>%]\}\}", re.DOTALL)
+_HUGO_ATTR_RE = re.compile(r"(?P<name>[a-zA-Z_][\w-]*)=[\"'](?P<value>.*?)[\"']")
+
 
 def _clean_text(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip()
+
+
+def _strip_hugo_shortcodes(value: str) -> str:
+    """Turn common Kubernetes/Hugo authoring syntax into readable Markdown.
+
+    Shortcodes are publishing instructions rather than document content. Keep
+    visible tooltip text, retain note bodies, and drop author-only comments so
+    neither DocumentIR nor the model sees template syntax as lesson material.
+    """
+
+    value = _HUGO_COMMENT_RE.sub("", value)
+
+    def tooltip_text(match: re.Match[str]) -> str:
+        attrs = {
+            item.group("name"): item.group("value")
+            for item in _HUGO_ATTR_RE.finditer(match.group("attrs"))
+        }
+        return attrs.get("text") or attrs.get("term_id", "")
+
+    def heading_text(match: re.Match[str]) -> str:
+        words = match.group("slug").replace("-", " ").strip()
+        return words.capitalize()
+
+    value = _HUGO_TOOLTIP_RE.sub(tooltip_text, value)
+    value = _HUGO_HEADING_RE.sub(heading_text, value)
+    return _HUGO_SHORTCODE_RE.sub("", value)
 
 
 def _document_id(path: Path) -> str:
@@ -225,7 +277,8 @@ def parse_markdown(path: str | Path) -> DocumentIR:
     with markdown-style headings therefore parses the same way.
     """
     p = Path(path)
-    tokens = MarkdownIt("commonmark").parse(_strip_frontmatter(_read_text(p)))
+    source = _strip_hugo_shortcodes(_strip_frontmatter(_read_text(p)))
+    tokens = MarkdownIt("commonmark").enable("table").parse(source)
     sections: list[Section] = []
     current: Section | None = None
     section_counter = 0
@@ -252,6 +305,7 @@ def parse_markdown(path: str | Path) -> DocumentIR:
         *,
         language: str | None = None,
         source_ref: str | None = None,
+        metadata: dict[str, JsonValue] | None = None,
     ) -> None:
         section = target_section()
         section.blocks.append(
@@ -261,6 +315,7 @@ def parse_markdown(path: str | Path) -> DocumentIR:
                 text=text,
                 language=language,
                 source_ref=source_ref,
+                metadata=metadata or {},
             )
         )
 
@@ -278,7 +333,54 @@ def parse_markdown(path: str | Path) -> DocumentIR:
         if token.type == "fence":
             code = token.content.rstrip("\n")
             if code.strip():
-                add_block("code", code, language=token.info.strip() or None)
+                language = token.info.strip() or None
+                kind: BlockKind = "equation" if language in {"math", "latex", "tex"} else "code"
+                add_block(kind, code, language=language)
+            index += 1
+            continue
+
+        if token.type == "blockquote_open":
+            parts: list[str] = []
+            index += 1
+            while index < len(tokens) and tokens[index].type != "blockquote_close":
+                if tokens[index].type == "inline":
+                    text = _inline_text(tokens[index])
+                    if text:
+                        parts.append(text)
+                index += 1
+            text = " ".join(parts)
+            if text:
+                callout = re.match(r"^\[!(?P<kind>[A-Za-z]+)\]\s*(?P<body>.*)$", text)
+                if callout:
+                    add_block(
+                        "callout",
+                        callout.group("body") or callout.group("kind"),
+                        metadata={"kind": callout.group("kind").lower()},
+                    )
+                else:
+                    add_block("quote", text)
+            index += 1
+            continue
+
+        if token.type == "table_open":
+            rows: list[list[str]] = []
+            row: list[str] | None = None
+            index += 1
+            while index < len(tokens) and tokens[index].type != "table_close":
+                if tokens[index].type == "tr_open":
+                    row = []
+                elif tokens[index].type == "inline" and row is not None:
+                    row.append(_inline_text(tokens[index]))
+                elif tokens[index].type == "tr_close" and row:
+                    rows.append(row)
+                    row = None
+                index += 1
+            if rows:
+                add_block(
+                    "table",
+                    "\n".join(" | ".join(cells) for cells in rows),
+                    metadata={"rows": cast(JsonValue, rows)},
+                )
             index += 1
             continue
 

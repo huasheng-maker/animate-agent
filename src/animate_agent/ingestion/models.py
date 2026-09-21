@@ -9,6 +9,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
+from animate_agent.paths import CACHE_DIR
+
 NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
@@ -87,7 +89,7 @@ class WebIngestionConfig(DomainModel):
     filter_threshold: float = Field(default=0.48, ge=0.0, le=1.0)
     filter_min_words: int = Field(default=20, ge=0, le=1_000)
     retention: RetentionPolicy = RetentionPolicy.STANDARD
-    crawler_data_directory: Path = Path(".cache/crawl4ai")
+    crawler_data_directory: Path = CACHE_DIR / "crawl4ai"
 
     @model_validator(mode="after")
     def normalize_domains(self) -> WebIngestionConfig:

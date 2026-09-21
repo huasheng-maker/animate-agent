@@ -29,7 +29,16 @@ class SourceDocument:
     url: str | None
     metadata: dict[str, JsonValue]
     citations: tuple[SourceCitation, ...]
+    blocks: tuple[SourceBlock, ...]
+    assets: tuple[SourceAsset, ...]
 ```
+
+`content` remains the lossless text/Markdown/HTML fallback. `blocks` is an optional richer view with
+`heading`, `paragraph`, `code`, `equation`, `table`, `image`, `diagram`, `list`, `quote`, and
+`callout` kinds; `assets` keeps reusable images/diagrams and their alt text, MIME type, and URL.
+Adapters should fill these fields when their parser already knows the structure. The builder prefers
+structured blocks but still accepts older adapters that only provide `content`, so adding another
+model/provider does not require changing DocumentIR.
 
 `DocumentIRBuilder` only accepts a sequence of these objects. It does not fetch, search, or import
 Crawl4AI. `DocumentIR.sources[]` retains each source record, and every generated block has a
@@ -114,3 +123,17 @@ KIMI_MODEL=kimi-k2.6
 
 The application loads the selected model provider in `llm.load_llm_config()`. Kimi Tools requests
 reuse the same project API credential without exposing it to source content or downstream IR.
+
+## Rich knowledge and animation planning
+
+The normalization boundary is intentionally not a summary boundary. `DocumentIR` preserves tables,
+equations, quotes, callouts, diagrams, code, lists, captions, assets, and per-block provenance.
+The Knowledge Agent then produces an evidence-backed semantic layer inside `LessonIR`: entities,
+concepts, directed relationships, ordered processes, states/transitions, examples, equations, and
+comparisons. Every semantic item cites real DocumentIR ids.
+
+The Storyboard Agent receives this semantic layer in addition to the teaching scenes. It must choose
+a visual pattern (`flow`, `state_transition`, `causal_chain`, `comparison`, `spatial_relation`,
+`timeline`, or `system_process`) and attach evidence-backed claims. This avoids treating every source
+as a short prose summary and gives the controlled renderer distinct structures to animate without
+executing model-generated UI code.

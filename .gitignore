@@ -5,9 +5,12 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.pytest-*/
 pytest-cache-files-*/
 pytest-of-*/
 test-temp-*/
+.test-temp-*/
+.tmp-pytest-*/
 .ruff_cache/
 .mypy_cache/
 .cache/
@@ -27,6 +30,7 @@ Thumbs.db
 *.local.*
 config/*.local.*
 data/generated/
+data/runs/
 data/documents/*.json
 dist/
 build/
@@ -48,5 +52,3 @@ LOCAL_CHANGE_SUMMARY_*.md
 /源代码文件/
 /源代码文件.zip
 .agents
-
-

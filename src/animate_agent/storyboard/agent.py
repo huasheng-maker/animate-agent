@@ -156,6 +156,25 @@ class StoryboardAgent:
         except ValidationError as exc:
             raise ValueError(_format_validation_error(exc)) from exc
 
+        document_refs = {
+            block.id for section in document.sections for block in section.blocks
+        } | {section.id for section in document.sections}
+        for index, scene in enumerate(storyboard.scenes):
+            where = f"scenes[{index}]"
+            if not scene.learning_question.strip():
+                raise ValueError(f"{where}.learning_question 不能为空")
+            if scene.visual_pattern is None:
+                raise ValueError(f"{where}.visual_pattern 必须选择一种视觉推理模式")
+            if not scene.claims:
+                raise ValueError(f"{where}.claims 必须包含至少一条有来源的事实")
+            for claim_index, claim in enumerate(scene.claims):
+                unknown = [ref for ref in claim.source_refs if ref not in document_refs]
+                if unknown:
+                    raise ValueError(
+                        f"{where}.claims[{claim_index}].source_refs 引用了不存在的 id: "
+                        f"{unknown}"
+                    )
+
         issues = validate_storyboard(
             storyboard, lesson=lesson, document=document, limits=self._limits
         )

@@ -10,6 +10,19 @@ const contentTypes: Record<string, string> = {
   "primitives.js": "text/javascript; charset=utf-8",
   "registry.js": "text/javascript; charset=utf-8",
   "stage.js": "text/javascript; charset=utf-8",
+  "timing.js": "text/javascript; charset=utf-8",
+  "animation-ir.js": "text/javascript; charset=utf-8",
+  "property-registry.js": "text/javascript; charset=utf-8",
+  "timeline.js": "text/javascript; charset=utf-8",
+  "effects.js": "text/javascript; charset=utf-8",
+  "runtime.js": "text/javascript; charset=utf-8",
+  "canvas2d-renderer.js": "text/javascript; charset=utf-8",
+  "gsap-easing.js": "text/javascript; charset=utf-8",
+  "gsap.min.js": "text/javascript; charset=utf-8",
+};
+
+const vendorAssets: Record<string, string> = {
+  "gsap.min.js": join(process.cwd(), "node_modules", "gsap", "dist", "gsap.min.js"),
 };
 
 export async function GET(
@@ -23,7 +36,7 @@ export async function GET(
   }
 
   try {
-    const contents = await readFile(join(process.cwd(), "player", asset));
+    const contents = await readFile(vendorAssets[asset] ?? join(process.cwd(), "player", asset));
     return new Response(contents, {
       headers: {
         "Content-Type": contentType,

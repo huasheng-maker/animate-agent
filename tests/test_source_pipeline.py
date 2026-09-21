@@ -13,6 +13,16 @@ from pydantic import ValidationError
 from animate_agent.documents.builder import build_document_ir
 from animate_agent.ingestion.models import WebIngestionConfig
 from animate_agent.ingestion.security import URLSecurityPolicy
+from animate_agent.knowledge.models import (
+    KnowledgeConcept,
+    KnowledgeProcess,
+    KnowledgeProcessStep,
+    KnowledgeRelationship,
+    LessonIR,
+    LessonScene,
+)
+from animate_agent.knowledge.prompts import build_knowledge_prompt
+from animate_agent.paths import SAMPLES_DIR
 from animate_agent.sources.adapters import (
     GeminiWebSearchAdapter,
     KimiWebReaderAdapter,
@@ -24,6 +34,8 @@ from animate_agent.sources.adapters import (
 )
 from animate_agent.sources.models import (
     QuerySourceInput,
+    SourceAsset,
+    SourceBlock,
     SourceDocument,
     UrlSourceInput,
 )
@@ -32,6 +44,7 @@ from animate_agent.sources.resolver import (
     default_web_reader_adapter,
     default_web_search_adapter,
 )
+from animate_agent.storyboard.prompts import build_storyboard_prompt
 
 
 class RecordingSearch:
@@ -451,6 +464,144 @@ def test_source_documents_build_document_ir_with_provenance() -> None:
     assert document.source.url == "https://example.com/guide"
 
 
+def test_structured_source_blocks_and_assets_survive_document_boundary() -> None:
+    source = SourceDocument(
+        id="rich-guide",
+        source_type="web_page",
+        title="Rich guide",
+        content="Structured fallback content.",
+        blocks=(
+            SourceBlock(id="section-model", type="heading", text="Model", level=2),
+            SourceBlock(
+                id="section-model-block-1",
+                type="equation",
+                text="y = f(x)",
+                language="latex",
+            ),
+            SourceBlock(
+                id="section-model-block-2",
+                type="table",
+                text="input | output\nx | y",
+                metadata={"rows": [["input", "output"], ["x", "y"]]},
+            ),
+            SourceBlock(
+                id="section-model-block-3",
+                type="diagram",
+                text="Input-to-output diagram",
+                url="https://example.com/diagram.svg",
+                asset_id="asset-diagram",
+            ),
+        ),
+        assets=(
+            SourceAsset(
+                id="asset-diagram",
+                type="diagram",
+                url="https://example.com/diagram.svg",
+                alt_text="Input-to-output diagram",
+            ),
+        ),
+    )
+
+    document = build_document_ir([source])
+
+    assert [block.type for block in document.sections[0].blocks] == [
+        "equation",
+        "table",
+        "diagram",
+    ]
+    assert document.sections[0].blocks[1].metadata["rows"][1] == ["x", "y"]
+    assert document.sections[0].blocks[2].asset_id == "asset-diagram"
+    assert document.sources[0].assets[0].id == "asset-diagram"
+    assert all(block.source_id == "rich-guide" for block in document.sections[0].blocks)
+
+
+def test_markdown_rich_blocks_are_not_flattened(tmp_path: Path) -> None:
+    source = tmp_path / "rich.md"
+    source.write_text(
+        "# Rich\n\n> [!NOTE] Keep this condition.\n\n"
+        "| Input | Output |\n| --- | --- |\n| x | y |\n\n"
+        "```math\ny = f(x)\n```\n",
+        encoding="utf-8",
+    )
+
+    documents = asyncio.run(SourceResolver().resolve({"type": "file", "path": source}))
+    document = build_document_ir(documents)
+
+    assert [block.type for block in document.sections[0].blocks] == [
+        "callout",
+        "table",
+        "equation",
+    ]
+    assert "type=table" in build_knowledge_prompt(document)
+
+
+def test_semantic_knowledge_is_available_to_storyboard_planning() -> None:
+    lesson = LessonIR(
+        lesson_id="lesson-rich",
+        document_id="rich-guide",
+        title="Rich lesson",
+        subject="Systems",
+        summary="A state drives a two-step process.",
+        learning_objectives=["Understand the state", "Trace the process"],
+        concepts=[
+            KnowledgeConcept(
+                name="Desired state",
+                definition="The target configuration.",
+                source_refs=["section-model-block-1"],
+            )
+        ],
+        relationships=[
+            KnowledgeRelationship(
+                source="Observed state",
+                target="Reconciliation",
+                relation="causes",
+                explanation="A difference triggers the control loop.",
+                source_refs=["section-model-block-2"],
+            )
+        ],
+        processes=[
+            KnowledgeProcess(
+                name="Control loop",
+                purpose="Move actual state toward desired state.",
+                source_refs=["section-model-block-2"],
+                steps=[
+                    KnowledgeProcessStep(
+                        order=1,
+                        title="Observe",
+                        description="Read current state.",
+                        source_refs=["section-model-block-2"],
+                    ),
+                    KnowledgeProcessStep(
+                        order=2,
+                        title="Act",
+                        description="Apply the required change.",
+                        source_refs=["section-model-block-3"],
+                    ),
+                ],
+            )
+        ],
+        scenes=[
+            LessonScene(
+                id="scene-1",
+                title="Control loop",
+                objective="Understand how observation triggers action.",
+                narration=(
+                    "Compare the observed state with the desired state, then apply the "
+                    "change required to bring the two states closer together."
+                ),
+                key_points=["Observed state", "Desired state"],
+                source_refs=["section-model-block-1", "section-model-block-2"],
+            )
+        ],
+    )
+
+    prompt = build_storyboard_prompt(lesson)
+
+    assert "Observed state --causes--> Reconciliation" in prompt
+    assert "1. Observe" in prompt
+    assert "2. Act" in prompt
+
+
 def test_rst_source_promotes_adorned_title_without_teaching_markup() -> None:
     document = build_document_ir(
         [
@@ -480,3 +631,18 @@ def test_file_input_routes_through_file_adapter(tmp_path: Path) -> None:
 
     assert documents[0].source_type == "file"
     assert "A local fact." in documents[0].content
+
+
+def test_kubernetes_markdown_shortcodes_do_not_leak_into_source_document() -> None:
+    source = SAMPLES_DIR / "controller.md"
+
+    documents = asyncio.run(SourceResolver().resolve({"type": "file", "path": source}))
+
+    content = documents[0].content
+    assert documents[0].title == "Controller pattern"
+    assert "{{<" not in content
+    assert "{{%" not in content
+    assert not content.startswith("# \n")
+    assert "API server" in content
+    assert "objects" in content
+    assert "For simplicity, this page omits" not in content

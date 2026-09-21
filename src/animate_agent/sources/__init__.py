@@ -3,6 +3,8 @@
 from animate_agent.sources.models import (
     FileSourceInput,
     QuerySourceInput,
+    SourceAsset,
+    SourceBlock,
     SourceCitation,
     SourceDocument,
     SourceInput,
@@ -13,6 +15,8 @@ from animate_agent.sources.models import (
 __all__ = [
     "FileSourceInput",
     "QuerySourceInput",
+    "SourceAsset",
+    "SourceBlock",
     "SourceCitation",
     "SourceDocument",
     "SourceInput",

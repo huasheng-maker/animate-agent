@@ -74,6 +74,7 @@ def _source_record(source: SourceDocument) -> DocumentSource:
         url=source.url,
         metadata=dict(source.metadata),
         citations=list(source.citations),
+        assets=list(source.assets),
     )
 
 
@@ -82,7 +83,7 @@ def _source_html(source: SourceDocument) -> str:
     if content_format == "html":
         return source.content
     if content_format == "markdown":
-        return cast(str, MarkdownIt("commonmark").render(source.content))
+        return cast(str, MarkdownIt("commonmark").enable("table").render(source.content))
     if content_format == "rst":
         return cast(str, MarkdownIt("commonmark").render(_rst_to_markdown(source.content)))
     paragraphs = [item.strip() for item in source.content.splitlines() if item.strip()]
@@ -104,6 +105,9 @@ def _with_provenance(
                 type=block.type,
                 text=block.text,
                 language=block.language,
+                caption=block.caption,
+                asset_id=block.asset_id,
+                metadata=dict(block.metadata),
                 source_id=source_id,
                 source_ref=block.source_ref,
             )
@@ -120,6 +124,38 @@ def _with_provenance(
     return output
 
 
+def _structured_sections(source: SourceDocument) -> list[Section]:
+    """Build sections from adapter-supplied blocks without flattening them to prose."""
+
+    sections: list[Section] = []
+    current: Section | None = None
+    for block in source.blocks:
+        if block.type == "heading":
+            current = Section(id=block.id, title=block.text, level=block.level or 1)
+            sections.append(current)
+            continue
+        if current is None:
+            current = Section(
+                id="section-overview",
+                title=source.title or "Overview",
+                level=1,
+            )
+            sections.append(current)
+        current.blocks.append(
+            DocumentBlock(
+                id=block.id,
+                type=block.type,
+                text=block.text,
+                language=block.language,
+                caption=block.caption,
+                asset_id=block.asset_id,
+                metadata=dict(block.metadata),
+                source_ref=block.url,
+            )
+        )
+    return sections
+
+
 def build_document_ir(sources: Sequence[SourceDocument]) -> DocumentIR:
     """Deterministically build one DocumentIR without acquisition dependencies."""
 
@@ -130,8 +166,11 @@ def build_document_ir(sources: Sequence[SourceDocument]) -> DocumentIR:
     all_sections: list[Section] = []
     multiple = len(validated) > 1
     for source in validated:
-        parsed = parse_html(_source_html(source), source.url or f"source://{source.id}")
-        sections = parsed.sections
+        if source.blocks:
+            sections = _structured_sections(source)
+        else:
+            parsed = parse_html(_source_html(source), source.url or f"source://{source.id}")
+            sections = parsed.sections
         if source.title and sections and sections[0].title == "Untitled document":
             sections[0].title = source.title
         all_sections.extend(_with_provenance(sections, source.id, prefix_ids=multiple))

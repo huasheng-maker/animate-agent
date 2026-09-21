@@ -1,6 +1,6 @@
 """Deterministic layout: a semantic storyboard scene becomes coordinates.
 
-Node in the pipeline: `StoryboardIR -> [this] -> RenderSpec -> [player] -> pixels`.
+Node in the pipeline: `StoryboardIR -> [this] -> geometry -> AnimationIR Compiler`.
 
 Why this is the layer that decides whether the picture is worth looking at
 -----------------------------------------------------------------------
@@ -42,11 +42,11 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Literal
 
 from pydantic import ValidationError
 
+from animate_agent.paths import GLYPH_DATA_DIR
 from animate_agent.rendering.models import (
     AngleElement,
     AxisElement,
@@ -55,6 +55,7 @@ from animate_agent.rendering.models import (
     EmitterElement,
     LinkElement,
     ReadoutElement,
+    RenderClaim,
     RenderControl,
     RenderElement,
     RenderPoint,
@@ -295,9 +296,6 @@ _BODY_SIZES: dict[str, tuple[float, float]] = {
 #: picture, and for the car the gap is visible and recorded. The check reads the
 #: directory, so the day the data exists the glyphs start appearing with no code
 #: change here.
-GLYPH_DATA_DIR = Path(__file__).resolve().parents[3] / "assets" / "glyphs"
-
-
 def _available_glyphs() -> frozenset[str]:
     if not GLYPH_DATA_DIR.is_dir():
         return frozenset()
@@ -1463,6 +1461,9 @@ def layout_scene(scene: StoryboardScene, *, stage: RenderStage | None = None) ->
         id=scene.id,
         # `StoryboardScene` has no title of its own — the beats carry the words.
         teaching_goal=scene.teaching_goal,
+        learning_question=scene.learning_question,
+        visual_pattern=scene.visual_pattern,
+        claims=[RenderClaim.model_validate(claim.model_dump()) for claim in scene.claims],
         preset=scene.scene_type,
         # Which element rides on which. Resolved into coordinates above; kept
         # because the player needs it to move a sensor with the car it is
@@ -1512,6 +1513,7 @@ def layout_storyboard(storyboard: StoryboardIR, *, stage: RenderStage | None = N
         storyboard_id=storyboard.storyboard_id,
         lesson_id=storyboard.lesson_id,
         document_id=storyboard.document_id,
+        learning_intent=storyboard.learning_intent,
         title=storyboard.title,
         subject=storyboard.subject,
         eyebrow=storyboard.eyebrow,

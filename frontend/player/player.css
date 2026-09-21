@@ -13,18 +13,20 @@
 
 :root {
   color-scheme: dark;
-  --bg: #07080d;
-  --panel: rgba(13, 18, 28, 0.86);
-  --panel-strong: rgba(19, 27, 41, 0.94);
-  --line: rgba(83, 246, 255, 0.32);
-  --line-hot: #42f7ff;
-  --magenta: #ff2fd6;
-  --yellow: #f4f06d;
-  --green: #5dff9c;
-  --text: #ecfbff;
-  --muted: #91a6b8;
+  --bg: #050507;
+  --panel: rgba(15, 16, 22, 0.78);
+  --panel-strong: rgba(20, 21, 29, 0.94);
+  --line: rgba(204, 255, 0, 0.18);
+  --line-hot: #ccff00;
+  --magenta: #ff3fd1;
+  --yellow: #e9ff86;
+  --green: #ccff00;
+  --cyan: #00eaf2;
+  --uv: #a56bff;
+  --text: #f4f7ee;
+  --muted: #9da3ae;
   --danger: #ff5e7a;
-  --shadow: 0 0 28px rgba(66, 247, 255, 0.16);
+  --shadow: 0 0 32px rgba(204, 255, 0, 0.1);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     "Microsoft YaHei", sans-serif;
 }
@@ -37,9 +39,12 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 12% 8%, rgba(66, 247, 255, 0.09), transparent 42%),
-    radial-gradient(circle at 88% 92%, rgba(255, 47, 214, 0.08), transparent 46%),
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px),
+    radial-gradient(circle at 12% 8%, rgba(0, 234, 242, 0.08), transparent 40%),
+    radial-gradient(circle at 88% 92%, rgba(165, 107, 255, 0.09), transparent 44%),
     var(--bg);
+  background-size: 42px 42px, 42px 42px, auto, auto, auto;
   color: var(--text);
   display: flex;
   flex-direction: column;
@@ -50,23 +55,41 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 18px 26px;
+  padding: 15px 22px;
   border-bottom: 1px solid var(--line);
-  background: var(--panel-strong);
+  background: rgba(5, 5, 7, 0.84);
+  backdrop-filter: blur(18px) saturate(135%);
 }
+
+.player-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-family: Syne, Inter, sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .16em;
+}
+
+.player-brand em { color: var(--line-hot); font-style: normal; }
+.player-brand-mark { width: 9px; height: 9px; border: 1px solid var(--line-hot); transform: rotate(45deg); box-shadow: 0 0 10px rgba(204,255,0,.4); }
 
 .eyebrow {
   margin: 0 0 4px;
   font-size: 12px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--magenta);
+  color: var(--cyan);
 }
 
 h1 {
   margin: 0;
+  font-family: Syne, Inter, sans-serif;
   font-size: 21px;
-  font-weight: 600;
+  font-weight: 750;
+  letter-spacing: -.025em;
 }
 
 .goal {
@@ -78,17 +101,23 @@ h1 {
 
 .transport {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 .transport button {
   min-width: 62px;
   padding: 9px 14px;
-  border-radius: 8px;
+  min-height: 40px;
+  border-radius: 0;
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--text);
-  font-size: 13px;
+  font-family: Syne, Inter, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .05em;
   cursor: pointer;
 }
 
@@ -97,20 +126,54 @@ h1 {
   box-shadow: var(--shadow);
 }
 
+.transport button:focus-visible, .speed-control select:focus-visible,
+.control-button:focus-visible, .step:focus-visible {
+  outline: 2px solid var(--line-hot);
+  outline-offset: 3px;
+}
+
+.transport button:active { color: var(--bg); background: var(--line-hot); }
+
+.frame-position {
+  min-width: 112px;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 0 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.speed-control select {
+  padding: 8px 28px 8px 10px;
+  border: 1px solid var(--line);
+  min-height: 40px;
+  border-radius: 0;
+  color: var(--text);
+  background: var(--panel);
+}
+
 .layout {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 18px;
-  padding: 18px 26px 26px;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 12px;
+  padding: 12px;
   min-height: 0;
 }
 
 .stage-wrap {
   position: relative;
   border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--panel);
+  border-radius: 2px;
+  background: linear-gradient(145deg, rgba(17,18,24,.78), rgba(6,7,10,.88));
   box-shadow: var(--shadow);
   /*
    * A floor on the height, not a preference. The canvas sizes itself as
@@ -122,13 +185,24 @@ h1 {
   min-height: min(62vh, 620px);
 }
 
+.stage-wrap::before, .stage-wrap::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  width: 18px;
+  height: 18px;
+}
+.stage-wrap::before { top: -1px; left: -1px; border-top: 1px solid var(--line-hot); border-left: 1px solid var(--line-hot); }
+.stage-wrap::after { right: -1px; bottom: -1px; border-right: 1px solid var(--cyan); border-bottom: 1px solid var(--cyan); }
+
 /* The canvas is sized by CSS and its backing store by `stage.js`, so the
    drawing buffer always matches the device pixel ratio. */
 #stage {
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: 14px;
+  border-radius: 2px;
 }
 
 .error {
@@ -159,7 +233,8 @@ h2 {
   font-size: 12px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--line-hot);
+  color: var(--cyan);
+  font-family: Syne, Inter, sans-serif;
 }
 
 .controls {
@@ -168,7 +243,7 @@ h2 {
   gap: 12px;
   padding: 14px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 2px;
   background: var(--panel);
 }
 
@@ -185,6 +260,8 @@ h2 {
   accent-color: var(--line-hot);
 }
 
+.control input[type="range"] { accent-color: var(--line-hot); }
+
 .control output {
   color: var(--line-hot);
   font-variant-numeric: tabular-nums;
@@ -192,7 +269,8 @@ h2 {
 
 .control-button {
   padding: 9px 14px;
-  border-radius: 8px;
+  min-height: 40px;
+  border-radius: 0;
   border: 1px solid var(--line);
   background: var(--panel-strong);
   color: var(--text);
@@ -214,7 +292,7 @@ h2 {
 
 .step {
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 0;
   border: 1px solid transparent;
   background: var(--panel);
   cursor: pointer;
@@ -223,13 +301,15 @@ h2 {
 .step.is-current {
   border-color: var(--line-hot);
   box-shadow: var(--shadow);
+  background: rgba(204, 255, 0, 0.055);
 }
 
 .step-title {
   display: block;
   font-size: 12px;
   letter-spacing: 0.08em;
-  color: var(--line-hot);
+  color: var(--cyan);
+  font-family: Syne, Inter, sans-serif;
 }
 
 .step-body {
@@ -241,4 +321,28 @@ h2 {
 
 .step.is-current .step-body {
   color: var(--text);
+}
+
+@media (max-width: 760px) {
+  .bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+    padding: 8px;
+  }
+
+  .side {
+    overflow: visible;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .12s !important;
+  }
 }

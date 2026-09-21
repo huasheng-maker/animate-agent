@@ -1,6 +1,6 @@
 """The render contract: a fully geometric spec the player can draw without guessing.
 
-Node in the pipeline: `StoryboardIR -> [layout] -> RenderSpec -> [player] -> pixels`.
+Node in the pipeline: `StoryboardIR -> [layout] -> RenderSpec compatibility geometry`.
 
 Why this is a new strict model instead of `animation/elements.py`
 ----------------------------------------------------------------
@@ -39,7 +39,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from animate_agent.storyboard.models import PropValue
+from animate_agent.animation_ir.models import AnimationIR
+from animate_agent.storyboard.models import PropValue, VisualPattern
 
 #: Bumped when a change would make an older player mis-draw a newer spec. The
 #: player refuses a version it does not know rather than rendering something
@@ -315,12 +316,23 @@ class RenderControl(_Model):
     action: str | None = None
 
 
+class RenderClaim(_Model):
+    """A source-backed statement preserved for verification and interaction."""
+
+    id: str = Field(min_length=1)
+    text: str = Field(min_length=1)
+    source_refs: list[str] = Field(default_factory=list, min_length=1)
+
+
 class RenderScene(_Model):
     """One drawable scene: geometry resolved, semantics intact."""
 
     id: str = Field(min_length=1)
     title: str = ""
     teaching_goal: str = ""
+    learning_question: str = ""
+    visual_pattern: VisualPattern | None = None
+    claims: list[RenderClaim] = Field(default_factory=list)
     #: The preset the layout used. Kept so a comparison can say *why* two specs
     #: differ, and so `--render-sample` can assert it matches the sample.
     preset: str = ""
@@ -365,8 +377,12 @@ class RenderSpec(_Model):
     storyboard_id: str = ""
     lesson_id: str = ""
     document_id: str = ""
+    learning_intent: str = ""
     title: str = ""
     subject: str = ""
     eyebrow: str = ""
     stage: RenderStage = Field(default_factory=RenderStage)
     scenes: list[RenderScene] = Field(default_factory=list)
+    #: Transitional compatibility payload. New runtimes consume this canonical
+    #: compiler output; RenderSpec fields remain for the current Canvas renderer.
+    animation_ir: AnimationIR | None = None

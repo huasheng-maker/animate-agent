@@ -3,13 +3,19 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
 import httpx
+
+from animate_agent.observability import animation_run_id
+
+logger = logging.getLogger("uvicorn.error.animate_agent.llm")
 
 #: Local key file, resolved against the repository root rather than the working
 #: directory so `animate-agent` reads the same file from anywhere it is invoked.
@@ -23,6 +29,26 @@ ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 #: budget is spent entirely on reasoning, which returns HTTP 200 with an empty
 #: body — not an error the transport can flag.
 DEFAULT_MAX_TOKENS = 32768
+LLM_PROGRESS_LOG_INTERVAL_SECONDS = 30.0
+
+
+async def _log_llm_waiting(
+    done: asyncio.Event,
+    *,
+    run_id: str,
+    started_at: float,
+) -> None:
+    """Emit a heartbeat while an upstream model request is still pending."""
+
+    while not done.is_set():
+        try:
+            await asyncio.wait_for(done.wait(), timeout=LLM_PROGRESS_LOG_INTERVAL_SECONDS)
+        except TimeoutError:
+            logger.info(
+                "llm run=%s status=waiting elapsed_seconds=%d",
+                run_id,
+                round(time.perf_counter() - started_at),
+            )
 
 
 class LLMBudgetExhaustedError(RuntimeError):
@@ -90,33 +116,73 @@ class LLMClient:
             payload["max_tokens"] = max_tokens
         headers = {"Authorization": f"Bearer {self._config.api_key}"}
         url = self._config.base_url.rstrip("/") + "/chat/completions"
+        run_id = animation_run_id()
+        started_at = time.perf_counter()
+        logger.info(
+            "llm run=%s status=started model=%s timeout_seconds=%g messages=%d max_tokens=%d",
+            run_id,
+            self._config.model,
+            self._config.timeout_seconds,
+            len(messages),
+            max_tokens,
+        )
+        request_done = asyncio.Event()
+        progress_task = asyncio.create_task(
+            _log_llm_waiting(request_done, run_id=run_id, started_at=started_at)
+        )
 
-        response = await self._client.post(url, json=payload, headers=headers)
-        if response.status_code == 429:
-            await asyncio.sleep(3.0)
+        try:
             response = await self._client.post(url, json=payload, headers=headers)
-        response.raise_for_status()
-
-        data = response.json()
-        choices = data.get("choices")
-        if not choices:
-            raise ValueError(f"LLM returned no choices: {data}")
-
-        choice = choices[0]
-        content = choice.get("message", {}).get("content")
-        if not isinstance(content, str):
-            raise ValueError(f"LLM returned non-string content: {content!r}")
-        if not content.strip():
-            # Left undetected, an exhausted budget surfaces further down as
-            # "Expecting value: line 1 column 1", which blames the JSON instead
-            # of the budget and sends you looking in the wrong place.
-            if choice.get("finish_reason") == "length":
-                raise LLMBudgetExhaustedError(
-                    f"模型把 max_tokens({max_tokens}) 全部用在推理上，没有产出正文。"
-                    "请调大 max_tokens——用同样的预算重试没有意义。"
+            if response.status_code == 429:
+                logger.warning(
+                    "llm run=%s status=rate_limited elapsed_ms=%d retry_in_seconds=3",
+                    run_id,
+                    round((time.perf_counter() - started_at) * 1000),
                 )
-            raise ValueError(f"LLM 返回空正文（finish_reason={choice.get('finish_reason')}）")
-        return content
+                await asyncio.sleep(3.0)
+                response = await self._client.post(url, json=payload, headers=headers)
+            response.raise_for_status()
+
+            data = response.json()
+            choices = data.get("choices")
+            if not choices:
+                raise ValueError("LLM returned no choices.")
+
+            choice = choices[0]
+            content = choice.get("message", {}).get("content")
+            if not isinstance(content, str):
+                raise ValueError("LLM returned non-string content.")
+            if not content.strip():
+                # Left undetected, an exhausted budget surfaces further down as
+                # "Expecting value: line 1 column 1", which blames the JSON instead
+                # of the budget and sends you looking in the wrong place.
+                if choice.get("finish_reason") == "length":
+                    raise LLMBudgetExhaustedError(
+                        f"模型把 max_tokens({max_tokens}) 全部用在推理上，没有产出正文。"
+                        "请调大 max_tokens——用同样的预算重试没有意义。"
+                    )
+                raise ValueError(
+                    f"LLM 返回空正文（finish_reason={choice.get('finish_reason')}）"
+                )
+            logger.info(
+                "llm run=%s status=completed status_code=%d elapsed_ms=%d response_chars=%d",
+                run_id,
+                response.status_code,
+                round((time.perf_counter() - started_at) * 1000),
+                len(content),
+            )
+            return content
+        except Exception as exc:
+            logger.exception(
+                "llm run=%s status=failed elapsed_ms=%d error_type=%s",
+                run_id,
+                round((time.perf_counter() - started_at) * 1000),
+                type(exc).__name__,
+            )
+            raise
+        finally:
+            request_done.set()
+            await progress_task
 
     async def aclose(self) -> None:
         """Close the underlying client when this object owns it."""

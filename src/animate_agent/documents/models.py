@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
-from animate_agent.sources.models import SourceCitation
+from animate_agent.sources.models import SourceAsset, SourceCitation
 
 
 class DocumentSource(BaseModel):
@@ -20,6 +20,7 @@ class DocumentSource(BaseModel):
     url: str | None = None
     metadata: dict[str, JsonValue] = Field(default_factory=dict)
     citations: list[SourceCitation] = Field(default_factory=list)
+    assets: list[SourceAsset] = Field(default_factory=list)
 
 
 class DocumentBlock(BaseModel):
@@ -28,9 +29,22 @@ class DocumentBlock(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: str
-    type: Literal["paragraph", "code", "list", "image"]
+    type: Literal[
+        "paragraph",
+        "code",
+        "equation",
+        "table",
+        "image",
+        "diagram",
+        "list",
+        "quote",
+        "callout",
+    ]
     text: str
     language: str | None = None
+    caption: str | None = None
+    asset_id: str | None = None
+    metadata: dict[str, JsonValue] = Field(default_factory=dict)
     source_id: str | None = None
     source_ref: str | None = None
 

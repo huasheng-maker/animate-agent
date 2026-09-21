@@ -51,6 +51,10 @@ const DODGE_RATE = 70;
  * spec, same frames" is the property the whole pipeline exists to keep.
  */
 export function createSimulation(scene, stage) {
+  let lastFrame = 0;
+  let lastFps = null;
+  let lastRevision = null;
+  let replaying = false;
   const home = new Map();
   for (const element of scene.elements) {
     home.set(element.id, { x: element.x, y: element.y, heading: element.heading ?? 0 });
@@ -84,17 +88,49 @@ export function createSimulation(scene, stage) {
     /** Lateral offset per body, in stage units. Persisted across frames. */
     dodge: new Map(),
 
-    reset() {
+    reset(lookup = () => null) {
       this.t = 0;
       this.live = new Map();
       this.danger = new Map();
       this.dodge = new Map();
-      this.update(0, () => null);
+      replaying = true;
+      this.update(0, lookup);
+      replaying = false;
+      lastFrame = 0;
+      lastFps = null;
+      lastRevision = null;
+    },
+
+    /** Resolve an exact logical frame, replaying stateful behavior when needed. */
+    seekFrame(frame, fps, lookup, revision = 0) {
+      if (!Number.isInteger(frame) || frame < 0) {
+        throw new Error("simulation frame must be a non-negative integer");
+      }
+      if (typeof fps !== "number" || !Number.isFinite(fps) || fps <= 0) {
+        throw new Error("simulation fps must be positive and finite");
+      }
+      if (lastFps !== fps || lastRevision !== revision || frame < lastFrame) {
+        this.reset(lookup);
+        lastFps = fps;
+        lastRevision = revision;
+      }
+      replaying = true;
+      while (lastFrame < frame) {
+        const nextFrame = lastFrame + 1;
+        this.update(1 / fps, lookup, nextFrame / fps);
+        lastFrame = nextFrame;
+      }
+      replaying = false;
+      return this.live;
     },
 
     /** Advance by `dt` seconds and recompute every derived value. */
-    update(dt, lookup) {
-      this.t += dt;
+    update(dt, lookup, absoluteTime = null) {
+      if (!replaying) {
+        lastFps = null;
+        lastRevision = null;
+      }
+      this.t = absoluteTime === null ? this.t + dt : absoluteTime;
       const live = new Map();
       this.live = live;
 

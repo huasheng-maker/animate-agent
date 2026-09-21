@@ -6,11 +6,11 @@ Animate Agent 是一个把技术文档、网页、文本和教学资料转换为
 
 - 可直接打开的静态首页与机器人避障交互 Demo；
 - Web Search / 单页 Web Reader / Text / File → `SourceDocument[]` → `DocumentIR` 的统一边界；
-- `DocumentIR` → `LessonIR` → `StoryboardIR` → `RenderSpec` 的动画编排链路；
+- Query 意图 + 检索证据 → `StoryboardIR` 的单次生成链路，以及文档模式的 `LessonIR` 兼容链路；
 - FastAPI URL 文档、课程与动画接口，以及对应的 Next.js 同源代理；
 - 可直接接收接口 `RenderSpec` 的 Canvas 播放器。
 
-> URL 动画生成会调用配置的 OpenAI-compatible LLM 两次；采集内容先被清洗、转换并通过严格 IR 校验，完整 HTML 不会直接进入模型，播放器也不会执行模型生成代码。
+> Query 动画在受控 Web Search 之后用一次成功的生成调用直接产出有证据的 `StoryboardIR`；URL/File 仍保留 `LessonIR → StoryboardIR` 兼容路径。完整 HTML 不会直接进入模型，播放器也不会执行模型生成代码。
 
 当前工作分支 `baseline/pre-refactor` 用于保留大规模重构前的真实实现。这里的“baseline”只有在相关源码、配置、测试和文档被审核并提交后才是可恢复快照；仅创建分支不会保存未提交工作区。
 
@@ -26,14 +26,29 @@ Query → Gemini/OpenAI/Kimi Search   ┐
 URL   → local/Kimi Web Reader       ├→ SourceDocument[] → DocumentIRBuilder → DocumentIR
 Text  → TextAdapter                 │
 File  → FileAdapter                 ┘
-    → KnowledgeAgent → LessonIR
-    → StoryboardAgent → StoryboardIR
-    → layout_storyboard → RenderSpec
-    → FastAPI response → sessionStorage → Canvas 播放器
+
+SourceDocument/DocumentIR 保留 heading、code、equation、table、image、diagram、list、quote、
+callout、assets 与逐块 provenance；Knowledge Agent 再提取实体、概念、关系、过程、状态、
+示例、公式和比较，避免在进入动画规划前压缩成低信息密度摘要。
+
+Query: 用户问题 → VisualizationIntent + EvidencePack
+    → IntentStoryboardAgent → StoryboardIR（一次成功生成调用）
+
+URL/File/Text: DocumentIR → KnowledgeAgent → LessonIR
+    → StoryboardAgent → StoryboardIR（兼容路径）
+
+StoryboardIR
+    → 本地 Compiler（确定性 layout）→ AnimationIR
+    → Animation Runtime → Scene State → Canvas2DRenderer
+
+RenderSpec v1 作为兼容载荷继续返回，并内嵌同一次编译产生的 AnimationIR；
+旧播放器可继续读取 RenderSpec，新播放器优先校验并使用 AnimationIR。
 ```
 
-当前 Next.js 首页只暴露 URL 和 Query 两种输入。文件上传仅接到 FastAPI 的
-`POST /api/lessons/from-file`，Text/File 尚未接入网页端完整动画流程。Query 搜索结果是带引用的
+当前 Next.js 首页暴露 URL、Query，以及仓库内白名单化的 Kubernetes Controller 固定文档示例。
+该示例通过 `POST /api/animations/from-example` 走完整 File → SourceDocument → RenderSpec 链路，
+并另提供明确标注的确定性“即时预览”用于无 LLM 的视觉验收。任意文件上传仍只接到 FastAPI 的
+`POST /api/lessons/from-file`，Text/File 尚未接入通用网页端完整动画流程。Query 搜索结果是带引用的
 provider synthesis；当前不会再逐个抓取所有引用页面。默认 URL Reader 是受 SSRF、重定向、大小和
 内容类型限制的静态 HTTP 单页读取器，Crawl4AI 只作为显式 optional adapter 存在。
 
@@ -127,12 +142,31 @@ npm --prefix frontend install
 npm --prefix frontend run dev
 ```
 
-打开 `http://localhost:3000`，输入公开网页 URL 后可以选择 `Inspect DocumentIR` 检查结构，或选择“生成动画”运行完整编排并进入播放器。浏览器先请求同源的 Next.js API 路由，再由 Next.js 访问 FastAPI，因此即使 Next.js 自动切换端口，也不会产生浏览器跨域问题。文档与动画结果分别保存到：
+打开 `http://localhost:3000`，可以直接运行 `data/samples/controller.md` 的 Controller 控制循环示例，
+也可以输入公开网页 URL 后选择 `Inspect DocumentIR` 检查结构，或选择“生成动画”运行完整编排并进入播放器。
+播放器使用 AnimationIR 的 `fps` 和整数帧作为规范时间坐标，支持播放/暂停、逐帧前后移动、
+按教学节拍切换、重置与 0.25×/0.5×/1×/2× 倍速；RAF 只负责调度绘制。浏览器先请求同源的
+Next.js API 路由，再由 Next.js 访问 FastAPI，因此即使 Next.js 自动切换端口，也不会产生浏览器跨域问题。文档与动画结果分别保存到：
 
 ```text
 data/documents/{document_id}.json
-data/generated/render-{storyboard_id}.json
+data/runs/{run_id}/
+  01-source-document.json
+  02-document-ir.json
+  03-lesson-ir.json
+  04-storyboard-ir.json
+  05-animation-ir.json
+  06-render-spec.json
 ```
+
+`01-source-document.json` 始终是数组，因为一次 Web Search 可能产生多个来源。Query 动画保留
+intent 直达 StoryboardIR 的一次生成调用，因此对应的 `03-lesson-ir.json` 是显式
+`status: "skipped"` 阶段记录；其他路径保存完整 LessonIR。失败运行保留已经完成的阶段文件，便于定位。
+
+动画接口可能包含多次、耗时数分钟的模型调用。Next.js 动画代理使用独立的长请求客户端，默认等待
+30 分钟，可用 `BACKEND_ANIMATION_TIMEOUT_MS` 调整。如果浏览器或代理中途断开，已经通过校验的
+LessonIR、被拒绝的 Storyboard 原文/错误和最终 RenderSpec 仍会按阶段落盘；首页的
+“查看最近生成结果”可以恢复该固定示例最后一次成功持久化的 RenderSpec。
 
 也可以直接调用接口：
 
@@ -143,6 +177,20 @@ Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/api/documents/from-ur
 # 需要在 .env 中配置 KIMI_KEY 或 DEEPSEEK_KEY
 Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/api/animations/from-url" -ContentType "application/json" -Body $body
 ```
+
+动画生成期间，启动 FastAPI 的终端会按阶段打印进度和耗时，例如：
+
+```text
+animation run=8f3a1c42d7b0 stage=source_ingestion status=completed elapsed_ms=42 document_id=... sections=6
+animation run=8f3a1c42d7b0 stage=lesson_generation status=started document_id=...
+llm run=8f3a1c42d7b0 status=started model=kimi-k2.6 timeout_seconds=600 messages=2 max_tokens=32768
+llm run=8f3a1c42d7b0 status=waiting elapsed_seconds=30
+```
+
+模型请求等待期间每 30 秒打印一次 `status=waiting` 心跳；默认单次模型请求超时为 600 秒，可通过
+`LLM_TIMEOUT_SECONDS` 调整。如果心跳停止且没有 completed/failed，应再检查后端进程是否仍在运行。
+如果发生异常，日志会给出当时的 `stage`、异常类型和 traceback，但不会打印文档正文、prompt、
+Authorization 或 API key。
 
 如后端不在默认地址运行，可在启动 Next.js 前设置服务端代理地址：
 
@@ -360,12 +408,17 @@ Builder 不得导入 Crawl4AI、Web Search、HTTP fetch 或供应商 response �
 
 ### 4.6 扩展 AI 阶段
 
-当前已经有两个模型阶段：Knowledge Agent 生成 `LessonIR`，Storyboard Agent 生成 `StoryboardIR`。扩展时仍应只用于：
+当前 Query 动画由 Intent Storyboard Agent 在受控检索后直接生成 `StoryboardIR`；URL/File/Text 仍保留 Knowledge Agent → Storyboard Agent 的兼容路径。AI 阶段只用于：
 
-- 识别教学目标与关键概念；
+- 以用户学习意图为主线，从证据中选择值得动态解释的过程、关系、状态和因果；
+- 为动画中的事实 claim 绑定可追溯 `source_refs`；
 - 规划 Storyboard；
 - 从已登记的模板和视觉组件中选择组合；
 - 生成旁白、镜头参数和交互提示。
+
+模型只生成受 Schema 约束的 StoryboardIR。几何布局、AnimationIR 编译、Timeline
+采样和 Scene State 计算均在本地完成；Canvas2DRenderer 不读取 Prompt、effect、
+Timeline 或浏览器时钟，只把当前帧 Scene State 转换为绘制操作。
 
 AI 输出仍应通过 Pydantic/JSON Schema 校验，并限制为允许的模板、元素、属性和动作；不要让模型输出任意前端代码再执行。
 

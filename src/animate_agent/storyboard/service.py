@@ -5,15 +5,17 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from animate_agent.animation.artifacts import current_run_directory
 from animate_agent.config import load_animation_settings, load_storyboard_settings
 from animate_agent.documents.models import DocumentIR
 from animate_agent.knowledge.models import LessonIR
 from animate_agent.llm import LLMClient, require_llm_config
+from animate_agent.paths import GENERATED_DIR
 from animate_agent.storyboard.agent import StoryboardAgent
 from animate_agent.storyboard.models import StoryboardIR
 from animate_agent.storyboard.validation import StoryboardLimits
 
-DEFAULT_GENERATED_DIR = Path("data/generated")
+DEFAULT_GENERATED_DIR = GENERATED_DIR
 
 
 def build_limits() -> StoryboardLimits:
@@ -54,6 +56,8 @@ async def generate_storyboard(
         owns_client = True
     try:
         storyboard = await agent.generate(lesson, document)
+        if current_run_directory() is not None:
+            return storyboard
         output_dir.mkdir(parents=True, exist_ok=True)
         destination = output_dir / f"{storyboard.storyboard_id}.json"
         destination.write_text(

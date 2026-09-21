@@ -37,6 +37,45 @@ def _collect_ids(document: DocumentIR) -> set[str]:
     return ids
 
 
+def _semantic_ref_lists(data: dict[str, Any]) -> list[tuple[str, object]]:
+    """Return semantic source-ref fields with paths suitable for diagnostics."""
+
+    output: list[tuple[str, object]] = []
+    for field in (
+        "entities",
+        "concepts",
+        "relationships",
+        "states",
+        "examples",
+        "equations",
+        "comparisons",
+    ):
+        items = data.get(field, [])
+        if isinstance(items, list):
+            for index, item in enumerate(items):
+                if isinstance(item, dict):
+                    output.append((f"{field}[{index}].source_refs", item.get("source_refs")))
+    processes = data.get("processes", [])
+    if isinstance(processes, list):
+        for process_index, process in enumerate(processes):
+            if not isinstance(process, dict):
+                continue
+            output.append(
+                (f"processes[{process_index}].source_refs", process.get("source_refs"))
+            )
+            steps = process.get("steps", [])
+            if isinstance(steps, list):
+                for step_index, step in enumerate(steps):
+                    if isinstance(step, dict):
+                        output.append(
+                            (
+                                f"processes[{process_index}].steps[{step_index}].source_refs",
+                                step.get("source_refs"),
+                            )
+                        )
+    return output
+
+
 def _uncovered_ids(document: DocumentIR, scenes: list[Any]) -> list[str]:
     """Return document ids that no scene references, in stable order.
 
@@ -158,6 +197,12 @@ class KnowledgeAgent:
         if len(scenes) > self._max_scenes:
             raise ValueError(f"scenes 数量 {len(scenes)} 超过上限 {self._max_scenes}")
         valid_ids = _collect_ids(document)
+        for path, refs in _semantic_ref_lists(data):
+            if not isinstance(refs, list) or not refs:
+                raise ValueError(f"{path} 必须引用至少一个真实来源 id")
+            bad = [ref for ref in refs if not isinstance(ref, str) or ref not in valid_ids]
+            if bad:
+                raise ValueError(f"{path} 引用了不存在的 id: {bad}")
         for index, scene in enumerate(scenes, start=1):
             if not isinstance(scene, dict):
                 raise ValueError(f"scenes[{index - 1}] 不是对象")

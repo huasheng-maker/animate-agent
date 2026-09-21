@@ -9,7 +9,9 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict
 
+from animate_agent.animation.artifacts import DEFAULT_RUNS_DIR
 from animate_agent.animation.service import generate_animation, generate_animation_from_url
+from animate_agent.animation_ir.compiler import compile_storyboard_render_spec
 from animate_agent.documents.file_parser import SUPPORTED_EXTENSIONS
 from animate_agent.documents.models import DocumentIR
 from animate_agent.documents.service import ingest_file, ingest_source, ingest_url
@@ -25,10 +27,22 @@ from animate_agent.ingestion.exceptions import (
 from animate_agent.knowledge.models import LessonIR
 from animate_agent.knowledge.service import generate_lesson
 from animate_agent.llm import MissingLLMKeyError
+from animate_agent.paths import SAMPLES_DIR, STORYBOARD_SAMPLES_DIR
 from animate_agent.rendering.models import RenderSpec
-from animate_agent.sources.models import QuerySourceInput
+from animate_agent.sources.adapters import FileAdapter
+from animate_agent.sources.models import FileSourceInput, QuerySourceInput
+from animate_agent.storyboard.models import StoryboardIR
+from animate_agent.storyboard.service import build_limits
+from animate_agent.storyboard.validation import validate_storyboard
 
 ALLOWED_EXTENSIONS = SUPPORTED_EXTENSIONS
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024
+EXAMPLE_DOCUMENTS = {
+    "controller": SAMPLES_DIR / "controller.md",
+}
+EXAMPLE_STORYBOARDS = {
+    "controller": STORYBOARD_SAMPLES_DIR / "controller.json",
+}
 
 
 class FromUrlRequest(BaseModel):
@@ -41,6 +55,12 @@ class FromQueryRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     query: str
+
+
+class FromExampleRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    example_id: str
 
 
 app = FastAPI(title="Animate Agent API", version="0.1.0")
@@ -67,6 +87,40 @@ def _ingestion_http_error(exc: IngestionError) -> HTTPException:
     return HTTPException(status_code=status_code, detail=str(exc))
 
 
+def _example_path(paths: dict[str, Path], example_id: str) -> Path:
+    """Resolve a repository-owned example without accepting filesystem paths."""
+
+    path = paths.get(example_id)
+    if path is None:
+        raise HTTPException(status_code=404, detail=f"Unknown animation example: {example_id}")
+    if not path.is_file():
+        raise HTTPException(status_code=500, detail=f"Animation example is missing: {example_id}")
+    return path
+
+
+async def _read_upload(file: UploadFile) -> tuple[str, bytes]:
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        supported = ", ".join(sorted(ALLOWED_EXTENSIONS))
+        raise HTTPException(
+            status_code=400,
+            detail=f"不支持的文件格式: {ext}。支持: {supported}",
+        )
+    content = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"文件超过 {MAX_UPLOAD_BYTES // (1024 * 1024)} MB 上限。",
+        )
+    return ext, content
+
+
+def _write_temporary_upload(ext: str, content: bytes) -> Path:
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+        tmp.write(content)
+        return Path(tmp.name)
+
+
 @app.post("/api/documents/from-url", response_model=DocumentIR)
 async def create_document_from_url(request: FromUrlRequest) -> DocumentIR:
     try:
@@ -89,6 +143,18 @@ async def create_document_from_query(request: FromQueryRequest) -> DocumentIR:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/documents/from-file", response_model=DocumentIR)
+async def create_document_from_file(file: Annotated[UploadFile, File()]) -> DocumentIR:
+    ext, content = await _read_upload(file)
+    tmp_path = _write_temporary_upload(ext, content)
+    try:
+        return ingest_file(tmp_path)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 @app.post("/api/lessons/from-url", response_model=LessonIR)
@@ -136,19 +202,79 @@ async def create_animation_from_query(request: FromQueryRequest) -> RenderSpec:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@app.post("/api/animations/from-example", response_model=RenderSpec)
+async def create_animation_from_example(request: FromExampleRequest) -> RenderSpec:
+    """Generate an animation from an allowlisted, version-controlled document."""
+
+    source = _example_path(EXAMPLE_DOCUMENTS, request.example_id)
+    try:
+        return await generate_animation(FileSourceInput(path=source))
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"Animation generation failed: {exc}") from exc
+    except MissingLLMKeyError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/animations/from-file", response_model=RenderSpec)
+async def create_animation_from_file(file: Annotated[UploadFile, File()]) -> RenderSpec:
+    ext, content = await _read_upload(file)
+    tmp_path = _write_temporary_upload(ext, content)
+    try:
+        return await generate_animation(FileSourceInput(path=tmp_path))
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"Animation generation failed: {exc}") from exc
+    except MissingLLMKeyError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+@app.get("/api/animations/examples/{example_id}/preview", response_model=RenderSpec)
+def preview_animation_example(example_id: str) -> RenderSpec:
+    """Render the reviewed visual baseline; this endpoint does not call an LLM."""
+
+    source = _example_path(EXAMPLE_STORYBOARDS, example_id)
+    storyboard = StoryboardIR.model_validate_json(source.read_text(encoding="utf-8"))
+    issues = validate_storyboard(storyboard, limits=build_limits())
+    if issues:
+        summary = "; ".join(f"{issue.where}: {issue.detail}" for issue in issues)
+        raise HTTPException(status_code=500, detail=f"Invalid reviewed storyboard: {summary}")
+    return compile_storyboard_render_spec(storyboard)
+
+
+@app.get("/api/animations/examples/{example_id}/latest", response_model=RenderSpec)
+def latest_generated_animation_example(example_id: str) -> RenderSpec:
+    """Return the last successfully persisted generated result for an example."""
+
+    source_path = _example_path(EXAMPLE_DOCUMENTS, example_id)
+    source = FileAdapter().resolve_sync(FileSourceInput(path=source_path))[0]
+    candidates = sorted(
+        DEFAULT_RUNS_DIR.glob("*/06-render-spec.json"),
+        key=lambda path: path.stat().st_mtime_ns,
+        reverse=True,
+    )
+    for render_path in candidates:
+        spec = RenderSpec.model_validate_json(render_path.read_text(encoding="utf-8"))
+        if spec.document_id == source.id:
+            return spec
+    raise HTTPException(
+        status_code=404,
+        detail=f"No generated animation is available yet for example: {example_id}",
+    )
+
+
 @app.post("/api/lessons/from-file", response_model=LessonIR)
 async def create_lesson_from_file(file: Annotated[UploadFile, File()]) -> LessonIR:
-    ext = Path(file.filename or "").suffix.lower()
-    if ext not in ALLOWED_EXTENSIONS:
-        supported = ", ".join(sorted(ALLOWED_EXTENSIONS))
-        raise HTTPException(
-            status_code=400,
-            detail=f"不支持的文件格式: {ext}。支持: {supported}",
-        )
-    content = await file.read()
-    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
-        tmp_path = Path(tmp.name)
-        tmp.write(content)
+    ext, content = await _read_upload(file)
+    tmp_path = _write_temporary_upload(ext, content)
     try:
         document = ingest_file(tmp_path)
         return await generate_lesson(document)
