@@ -1,0 +1,14 @@
+.git
+.venv
+.env
+.env.*
+!.env.example
+.agents
+.codex
+frontend/node_modules
+frontend/.next
+data/runs
+data/generated
+*.log
+__pycache__
+.pytest_cache

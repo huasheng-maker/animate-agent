@@ -1,0 +1,44 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    env_file:
+      - ${BACKEND_ENV_FILE:-/etc/animate-agent/backend.env}
+    environment:
+      PUBLIC_DEMO_MODE: "1"
+      XIAOYI_PUBLIC_ORIGIN: https://${APP_DOMAIN:?APP_DOMAIN is required}
+    volumes:
+      - type: bind
+        source: /srv/animate-agent-data/runs
+        target: /app/data/runs
+        bind:
+          create_host_path: false
+
+  web:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    environment:
+      BACKEND_API_BASE_URL: http://api:8000
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - api
+      - web
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?APP_DOMAIN is required}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile.azure:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

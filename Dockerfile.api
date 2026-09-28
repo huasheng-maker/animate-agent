@@ -1,0 +1,16 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+
+COPY pyproject.toml README.md ./
+COPY src ./src
+COPY config ./config
+COPY data/samples ./data/samples
+RUN pip install --no-cache-dir . \
+    && mkdir -p /app/data/runs \
+    && chown -R 10001:10001 /app/data/runs
+
+USER 10001:10001
+EXPOSE 8000
+CMD ["python", "-m", "uvicorn", "animate_agent.api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
