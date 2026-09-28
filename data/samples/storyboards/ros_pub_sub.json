@@ -17,7 +17,7 @@
           "role": "node",
           "label": "Publisher 节点",
           "props": {},
-          "source_refs": []
+          "source_refs": ["ros-source"]
         },
         {
           "id": "cmd-topic",
@@ -62,7 +62,8 @@
           "description": "手册里的节点与话题被抽成一张可点击的拓扑图。",
           "highlights": ["talker", "cmd-topic", "base"],
           "object_states": {},
-          "key_points": ["节点", "话题"]
+          "key_points": ["节点", "话题"],
+          "source_refs": ["ros-source"]
         },
         {
           "id": "publish",
@@ -70,7 +71,8 @@
           "description": "发布者把 Twist 消息写进 /cmd_vel，令牌开始沿链路前进。",
           "highlights": ["talker", "twist"],
           "object_states": { "twist": { "state": "已发布" } },
-          "key_points": ["发布", "消息载荷"]
+          "key_points": ["发布", "消息载荷"],
+          "source_refs": ["ros-source"]
         },
         {
           "id": "receive",
@@ -78,7 +80,8 @@
           "description": "订阅者收到消息后触发回调，机器人运行时随之改变状态。",
           "highlights": ["base", "runtime"],
           "object_states": { "twist": { "state": "已接收" } },
-          "key_points": ["回调", "驱动运行时"]
+          "key_points": ["回调", "驱动运行时"],
+          "source_refs": ["ros-source"]
         },
         {
           "id": "inspect",
@@ -86,7 +89,8 @@
           "description": "点话题或消息类型，可以反向高亮写出它的那个节点。",
           "highlights": ["cmd-topic", "message-type", "talker"],
           "object_states": {},
-          "key_points": ["源码关联", "消息类型"]
+          "key_points": ["源码关联", "消息类型"],
+          "source_refs": ["ros-source"]
         }
       ],
       "controls": [

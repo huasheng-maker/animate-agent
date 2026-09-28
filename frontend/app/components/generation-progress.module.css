@@ -1,0 +1,41 @@
+.panel { position: relative; z-index: 3; margin: 16px; padding: 24px; color: #edf1e6; background: linear-gradient(135deg, #17201bd9, #0d141af5); border: 1px solid #ccff0050; border-radius: 18px; box-shadow: 0 18px 50px #0003; }
+.heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.eyebrow { font-size: 9px; letter-spacing: .18em; color: #b6c393; }
+.heading h3 { margin: 8px 0; font-size: clamp(20px, 2vw, 28px); }
+.clock { font: 24px ui-monospace, monospace; color: #ccff00; font-variant-numeric: tabular-nums; }
+.connection, .message { font-size: 12px; line-height: 1.7; color: #b5c2be; }
+.failure { font-size: 13px; line-height: 1.8; color: #ffd9b0; padding: 14px; border: 1px solid #f5b07066; background: #f5b0700a; border-radius: 8px; }
+.steps { padding: 0; margin: 22px 0; list-style: none; display: flex; flex-wrap: wrap; gap: 10px; }
+.steps li { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #92a09a; border-bottom: 2px solid #ffffff18; padding: 8px 0; flex: 1; white-space: nowrap; }
+.steps .done { color: #ccff00; border-color: #ccff00; }
+.steps .current { color: #fff; border-color: #dbe5c2; }
+.current span { animation: breathe 2.4s ease-in-out infinite; }
+.assembly { height: 110px; position: relative; display: flex; align-items: center; justify-content: center; gap: 14px; overflow: hidden; }
+.assembly i { width: 38px; height: 42px; border: 1px solid #ccff0066; background: linear-gradient(135deg, #ccff001b, transparent); border-radius: 8px; animation: assemble 4s ease-in-out infinite; }
+.assembly i:nth-child(2) { animation-delay: .45s; }.assembly i:nth-child(3) { animation-delay: .9s; }
+.assembly div { position: absolute; bottom: 0; font-size: 11px; letter-spacing: .2em; color: #87958b; }
+.content { margin-top: 20px; min-width: 0; }
+.contentTitle { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 13px; line-height: 1.6; }
+.contentTitle span { font-size: 10px; color: #99aaa1; }
+.sources { max-height: 230px; overflow: auto; margin-top: 12px; scrollbar-width: thin; }
+.sources details { border-bottom: 1px solid #ffffff14; }
+.sources summary { cursor: pointer; padding: 12px 4px; font-size: 12px; line-height: 1.6; }
+.sources summary span { float: right; margin-left: 8px; color: #97a697; font-size: 10px; }
+.sources p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.9; padding: 0 10px; color: #c5cfc7; }
+.scenes { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 10px; margin-top: 12px; max-height: 240px; overflow: auto; }
+.scenes article { border: 1px solid #ccff002e; background: #ccff0007; border-radius: 10px; padding: 16px; animation: appear .5s ease-out; }
+.scenes article > span { color: #ccff00; font-size: 9px; letter-spacing: .14em; }
+.scenes h4 { font-size: 13px; line-height: 1.6; margin: 10px 0 0; }
+.scenes p { font-size: 12px; line-height: 1.7; color: #bbc5bf; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 18px; }
+.actions button { color: #e0e9d5; border: 1px solid #ffffff30; background: #ffffff07; border-radius: 8px; padding: 10px 14px; cursor: pointer; font: inherit; font-size: 12px; }
+.actions button:hover { border-color: #ccff00; }.actions button:focus-visible, .sources summary:focus-visible { outline: 2px solid #ccff00; outline-offset: 3px; }
+.actions .play { background: #ccff00; color: #101508; font-weight: 700; border-color: #ccff00; }
+.actions > span { color: #aab5ac; font-size: 11px; }
+.compact { padding: 16px 20px; }.compact .heading h3 { font-size: 18px; }
+.panel[data-paused="true"] * { animation-play-state: paused; }
+@keyframes breathe { 50% { opacity: .4; } }
+@keyframes assemble { 0%, 100% { transform: translateY(4px) rotate(-6deg); opacity: .5; } 50% { transform: translateY(-5px) rotate(0); opacity: 1; } }
+@keyframes appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (max-width: 600px) { .panel { padding: 16px; margin: 10px; }.steps { gap: 6px; }.steps li { font-size: 10px; }.actions button { flex: 1; }.clock { font-size: 20px; } }
+@media (prefers-reduced-motion: reduce) { .panel *, .panel *::before { animation: none !important; } }

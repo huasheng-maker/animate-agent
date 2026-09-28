@@ -15,6 +15,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from animate_agent.mechanisms import MechanismPlan
+
 # Object, step and control ids are authored by the model, so the pattern is a
 # guard against punctuation soup rather than a naming preference.
 ID_PATTERN = r"^[a-z][a-z0-9_-]*$"
@@ -82,6 +84,7 @@ class StoryboardStep(BaseModel):
     highlights: list[str] = Field(default_factory=list, max_length=12)
     object_states: dict[str, dict[str, PropValue]] = Field(default_factory=dict)
     key_points: list[str] = Field(default_factory=list, min_length=1, max_length=8)
+    source_refs: list[str] = Field(min_length=1, max_length=12)
 
     @model_validator(mode="after")
     def _must_change_something(self) -> StoryboardStep:
@@ -159,6 +162,16 @@ class StoryboardScene(BaseModel):
     controls: list[StoryboardControl] = Field(default_factory=list, max_length=6)
     params: dict[str, PropValue] = Field(default_factory=dict)
     renderer_hint: str | None = Field(default=None, max_length=32)
+    mechanism: MechanismPlan | None = None
+
+    @model_validator(mode="after")
+    def _mechanism_contract(self) -> StoryboardScene:
+        if self.mechanism is not None:
+            if len(self.mechanism.phases) != len(self.steps):
+                raise ValueError("mechanism.phases must correspond one-to-one to scene.steps")
+            if self.controls:
+                raise ValueError("mechanism controls are supplied by the compiler; use controls=[]")
+        return self
 
 
 class StoryboardIR(BaseModel):

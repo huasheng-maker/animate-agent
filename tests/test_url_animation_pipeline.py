@@ -191,6 +191,12 @@ def test_generic_animation_service_runs_all_stages_and_persists_render_spec(
     monkeypatch: MonkeyPatch, tmp_path: Path, caplog: LogCaptureFixture
 ) -> None:
     calls: list[str] = []
+    progress: list[tuple[str, dict[str, object]]] = []
+
+    def observe(kind: str, **data: object) -> None:
+        progress.append((kind, data))
+
+    monkeypatch.setattr(animation_service, "report_progress", observe)
     storyboard = _sample_storyboard()
 
     class FakeReader:
@@ -236,6 +242,19 @@ def test_generic_animation_service_runs_all_stages_and_persists_render_spec(
 
     assert [item.split(":", 1)[0] for item in calls] == ["ingest", "lesson", "storyboard"]
     assert spec.scenes
+    assert [data["name"] for kind, data in progress if kind == "artifact"] == [
+        "document",
+        "lesson",
+        "storyboard",
+    ]
+    assert [data["stage"] for kind, data in progress if kind == "stage"] == [
+        "source_ingestion",
+        "lesson_generation",
+        "storyboard_generation",
+        "layout",
+        "animation_ir_compile",
+        "persist",
+    ]
     run_directories = [path for path in tmp_path.iterdir() if path.is_dir()]
     assert len(run_directories) == 1
     run_directory = run_directories[0]

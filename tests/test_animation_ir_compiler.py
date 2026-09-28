@@ -8,6 +8,7 @@ from animate_agent.animation_ir.compiler import (
     compile_storyboard_render_spec,
 )
 from animate_agent.animation_ir.quality import evaluate_animation_ir
+from animate_agent.documents.models import DocumentBlock, DocumentIR, DocumentSource, Section
 from animate_agent.paths import STORYBOARD_SAMPLES_DIR
 from animate_agent.storyboard.models import StoryboardIR
 
@@ -48,6 +49,8 @@ def test_storyboard_compiles_to_deterministic_renderer_neutral_animation_ir() ->
     assert len(first.scenes[0].beats) == len(storyboard.scenes[0].steps)
     first_beat = first.scenes[0].beats[0]
     assert first_beat.id == storyboard.scenes[0].steps[0].id
+    assert first_beat.sourceRefs == ["controller-source"]
+    assert first_beat.durationInFrames >= 180
     assert first_beat.timeline.items
     properties = {
         track.property
@@ -63,6 +66,36 @@ def test_storyboard_compiles_to_deterministic_renderer_neutral_animation_ir() ->
     assert encoded["fps"] == 60
     assert encoded["scenes"][0]["nodes"][0]["parentId"] is None
     assert "pathProgress" in encoded["scenes"][0]["nodes"][0]["transform"]
+
+
+def test_compiler_embeds_safe_per_beat_citations_from_document_ir() -> None:
+    document = DocumentIR(
+        document_id="sample-controller-document",
+        title="Controller notes",
+        source=DocumentSource(type="file", title="controller.md"),
+        sections=[
+            Section(
+                id="controller-source",
+                title="Reconciliation loop",
+                level=1,
+                blocks=[
+                    DocumentBlock(
+                        id="controller-block",
+                        type="paragraph",
+                        text="A controller observes desired and current state, then acts.",
+                    )
+                ],
+            )
+        ],
+    )
+
+    animation = compile_storyboard(_storyboard(), document=document)
+
+    assert animation.citations[0].id == "controller-source"
+    assert animation.citations[0].title == "controller.md"
+    assert animation.citations[0].locator == "Reconciliation loop"
+    assert "observes desired" in animation.citations[0].excerpt
+    assert animation.citations[0].url is None
 
 
 def test_compatibility_render_spec_embeds_the_same_canonical_ir() -> None:

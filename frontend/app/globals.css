@@ -235,6 +235,10 @@ form.source-form { padding: 0; border: 0; border-radius: 0; background: transpar
 .dock-footer span::before { content: ""; display: inline-block; width: 4px; height: 4px; margin-right: 6px; border-radius: 50%; background: var(--lime); vertical-align: 1px; }
 
 .graph-stage { display: flex; flex-direction: column; min-height: 680px; overflow: hidden; }
+.graph-stage.has-generation { overflow-y: auto; padding-bottom: 34px; }
+.graph-stage.has-generation > .stage-heading { position: relative; flex-shrink: 0; }
+.graph-stage.has-generation > .stage-hud { display: none; }
+.graph-stage.has-generation > section { flex-shrink: 0; }
 .stage-heading { position: absolute; z-index: 5; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; padding: 21px 23px; pointer-events: none; }
 .stage-heading h2 { max-width: 500px; margin: 7px 0 0; color: var(--studio-text); font: 750 18px/1.12 var(--font-display), sans-serif; letter-spacing: -.025em; text-transform: uppercase; }
 .stage-metrics { display: flex; gap: 18px; }

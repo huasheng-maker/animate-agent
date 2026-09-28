@@ -1,16 +1,24 @@
 """FastAPI entrypoint for the first Animate Agent vertical slice."""
 
+import os
+import re
 import tempfile
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
 import httpx
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict
+from starlette.responses import JSONResponse
 
 from animate_agent.animation.artifacts import DEFAULT_RUNS_DIR
+from animate_agent.animation.job_routes import router as jobs_router
+from animate_agent.animation.jobs import JobManager, JobStore
 from animate_agent.animation.service import generate_animation, generate_animation_from_url
+from animate_agent.animation.xiaoyi import router as xiaoyi_router
 from animate_agent.animation_ir.compiler import compile_storyboard_render_spec
 from animate_agent.documents.file_parser import SUPPORTED_EXTENSIONS
 from animate_agent.documents.models import DocumentIR
@@ -63,7 +71,47 @@ class FromExampleRequest(BaseModel):
     example_id: str
 
 
-app = FastAPI(title="Animate Agent API", version="0.1.0")
+@asynccontextmanager
+async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+    jobs = JobManager(JobStore(DEFAULT_RUNS_DIR / "jobs.sqlite3"))
+    jobs.store.interrupt_unfinished()
+    application.state.animation_jobs = jobs
+    try:
+        yield
+    finally:
+        await jobs.close()
+
+
+app = FastAPI(title="Animate Agent API", version="0.1.0", lifespan=lifespan)
+app.include_router(jobs_router)
+app.include_router(xiaoyi_router)
+
+
+@app.middleware("http")
+async def restrict_public_demo(request: Request, call_next):  # type: ignore[no-untyped-def]
+    """Keep legacy development endpoints off the public demo service."""
+    if os.environ.get("PUBLIC_DEMO_MODE") == "1":
+        path = request.url.path
+        method = request.method
+        allowed = (
+            (method == "GET" and path == "/health")
+            or (method == "POST" and path == "/api/xiaoyi/jobs")
+            or (method == "GET" and re.fullmatch(r"/api/xiaoyi/jobs/[a-fA-F0-9-]{32,36}", path))
+            or (
+                method == "GET"
+                and re.fullmatch(
+                    r"/api/animation-jobs/[a-fA-F0-9-]{32,36}(?:/result)?", path
+                )
+            )
+        )
+        if not allowed:
+            return JSONResponse({"detail": "Public demo route unavailable"}, status_code=403)
+    return await call_next(request)
+
+
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],

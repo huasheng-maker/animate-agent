@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "goal": "解释测距、空间安全约束与路径搜索的区别，并通过改变环境预测机器人能否抵达目标。",
+  "source_refs": ["lidar-model", "configuration-space", "astar-grid"],
+  "relations": [
+    {"cause": "首个表面截断射线", "effect": "遮挡后方保持未知"},
+    {"cause": "机器人半径和安全余量增大", "effect": "可通行空间缩小，窄门可能无法通过"},
+    {"cause": "可通行栅格改变", "effect": "A* 路线改变或报告无路径"}
+  ],
+  "model": {
+    "id": "lidar-grid-v1",
+    "assumptions": ["二维静态栅格，障碍占满栅格", "圆盘机器人，四邻接移动，忽略动力学", "默认使用已知地图；单帧观测模式禁止通过未知空间", "栅格膨胀额外加半格净空，可能保守拒绝实际可行的窄路"]
+  },
+  "beats": [
+    {"id": "sense", "title": "先看见表面", "change": "射线依次点亮最近回波", "explanation": "一束光只报告最近的表面。青色是回波；障碍背后的空间，并没有被这次测量看见。", "source_ref": "lidar-model"},
+    {"id": "inflate", "title": "给车身留空间", "change": "显示障碍周围的禁行格", "explanation": "把机器人当作一个点之前，先为它的半径和安全余量留出空间。琥珀色格不能让机器人中心通过。", "source_ref": "configuration-space"},
+    {"id": "search", "title": "寻找一条可行路", "change": "按 A* 实际访问顺序展开栅格并显示路线", "explanation": "A* 比较 f = g + h：已走的格数，加上到目标的曼哈顿距离。蓝色是已经展开的格，绿色是找到的最短栅格路线。", "source_ref": "astar-grid"},
+    {"id": "execute", "title": "用运动检验答案", "change": "机器人沿求解路线行驶或停在起点", "explanation": "路线来自搜索结果。没有可行路径就保持停止；有路径才执行。现在改变环境，先预测，再观察。", "source_ref": "astar-grid"}
+  ],
+  "interactions": [
+    {"parameter": "obstacleY", "observe": "货架位置改变路线"},
+    {"parameter": "radius", "observe": "大机器人可能过不了窄门"},
+    {"parameter": "margin", "observe": "更大的余量减少可通行区域"},
+    {"parameter": "range", "observe": "测距范围改变观测；已知地图模式的路线不随之改变"},
+    {"parameter": "mode", "observe": "没有先验地图时，单帧感知可能不足以找到通路"},
+    {"parameter": "preset", "observe": "完全封路时没有路径"}
+  ],
+  "checks": [
+    {"question": "缩短雷达量程，已知地图中的路线一定改变吗？", "answer": "不一定。本例规划使用完整先验地图；量程改变测量，但不改变地图。切换单帧模式后，可通行范围才受这次观测限制。", "experiment": "range"},
+    {"question": "窄门里中心点能过，整个机器人就能过吗？", "answer": "不能。选择窄门，把半径从 0.17 m 增大到 0.50 m；安全膨胀会封闭中心的可行通道。", "experiment": "radius"},
+    {"question": "没有找到路径，是算法坏了吗？", "answer": "不一定。封路时确实无路；仅单帧模式也可能只是缺少足够地图证据。停止比虚构一条穿墙路线正确。", "experiment": "preset"}
+  ]
+}

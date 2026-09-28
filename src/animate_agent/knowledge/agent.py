@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from animate_agent.animation.progress import report_progress
 from animate_agent.documents.models import DocumentIR
 from animate_agent.json_utils import extract_json_object
 from animate_agent.knowledge.fidelity import (
@@ -148,6 +149,8 @@ class KnowledgeAgent:
         ]
         last_error = ""
         for _attempt in range(1, self._max_retries + 1):
+            if _attempt > 1:
+                report_progress("retry")
             raw = await self._llm.chat(
                 messages, temperature=self._temperature, max_tokens=DEFAULT_MAX_TOKENS
             )

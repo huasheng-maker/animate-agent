@@ -12,7 +12,7 @@
       "teaching_goal": "用恒温器理解期望状态与当前状态之间的持续控制循环",
       "lesson_scene_ids": ["controller-basics"],
       "objects": [
-        {"id": "desired", "role": "node", "label": "期望温度", "props": {"glyph": "package"}, "source_refs": []},
+        {"id": "desired", "role": "node", "label": "期望温度", "props": {"glyph": "package"}, "source_refs": ["controller-source"]},
         {"id": "controller", "role": "node", "label": "Controller", "props": {"glyph": "cpu"}, "source_refs": []},
         {"id": "heater", "role": "device", "label": "加热设备", "props": {"glyph": "server"}, "source_refs": []},
         {"id": "current", "role": "node", "label": "当前温度", "props": {"glyph": "package"}, "source_refs": []},
@@ -24,10 +24,10 @@
         {"id": "gap", "role": "decision", "label": "状态差异", "props": {"text": "期望 22°C · 当前 18°C", "tone": "danger", "align": "left"}, "source_refs": []}
       ],
       "steps": [
-        {"id": "observe-state", "title": "观察状态", "description": "控制器同时读取期望温度和当前温度，建立这一轮控制循环的输入。", "highlights": ["desired", "current", "controller"], "object_states": {"signal": {"state": "读取状态"}}, "key_points": ["期望状态", "当前状态"]},
-        {"id": "compare-state", "title": "比较差异", "description": "当前温度低于期望温度，控制器据此决定需要启动加热设备。", "highlights": ["compare", "controller", "gap"], "object_states": {"gap": {"text": "差异 +4°C · 需要加热", "tone": "danger"}}, "key_points": ["比较", "决策"]},
-        {"id": "take-action", "title": "执行动作", "description": "控制信号沿动作链路到达加热设备，设备开始改变房间温度。", "highlights": ["act", "signal", "heater"], "object_states": {"act": {"active": true}, "signal": {"state": "开启加热"}}, "key_points": ["执行动作", "改变环境"]},
-        {"id": "report-state", "title": "反馈再观察", "description": "温度变化被重新观察；控制器继续下一轮，而不是执行一次后就终止。", "highlights": ["change", "current", "observe", "controller"], "object_states": {"change": {"active": true}, "observe": {"active": true}, "gap": {"text": "当前 21°C · 继续协调", "tone": "success"}}, "key_points": ["状态反馈", "非终止循环"]}
+        {"id": "observe-state", "title": "观察状态", "description": "控制器同时读取期望温度和当前温度，建立这一轮控制循环的输入。", "highlights": ["desired", "current", "controller"], "object_states": {"signal": {"state": "读取状态"}}, "key_points": ["期望状态", "当前状态"], "source_refs": ["controller-source"]},
+        {"id": "compare-state", "title": "比较差异", "description": "当前温度低于期望温度，控制器据此决定需要启动加热设备。", "highlights": ["compare", "controller", "gap"], "object_states": {"gap": {"text": "差异 +4°C · 需要加热", "tone": "danger"}}, "key_points": ["比较", "决策"], "source_refs": ["controller-source"]},
+        {"id": "take-action", "title": "执行动作", "description": "控制信号沿动作链路到达加热设备，设备开始改变房间温度。", "highlights": ["act", "signal", "heater"], "object_states": {"act": {"active": true}, "signal": {"state": "开启加热"}}, "key_points": ["执行动作", "改变环境"], "source_refs": ["controller-source"]},
+        {"id": "report-state", "title": "反馈再观察", "description": "温度变化被重新观察；控制器继续下一轮，而不是执行一次后就终止。", "highlights": ["change", "current", "observe", "controller"], "object_states": {"change": {"active": true}, "observe": {"active": true}, "gap": {"text": "当前 21°C · 继续协调", "tone": "success"}}, "key_points": ["状态反馈", "非终止循环"], "source_refs": ["controller-source"]}
       ],
       "controls": [
         {"id": "signal-speed", "type": "slider", "label": "信号速度", "target_property": "signal.speed", "min": 0.2, "max": 1.5, "default": 0.65, "step": 0.05, "unit": "x"},
@@ -42,7 +42,7 @@
       "teaching_goal": "看懂 Job Controller 如何通过 API Server 创建 Pod 并回写完成状态",
       "lesson_scene_ids": ["job-controller"],
       "objects": [
-        {"id": "job", "role": "node", "label": "Job 对象", "props": {"glyph": "package"}, "source_refs": []},
+        {"id": "job", "role": "node", "label": "Job 对象", "props": {"glyph": "package"}, "source_refs": ["controller-source"]},
         {"id": "job-controller", "role": "node", "label": "Job Controller", "props": {"glyph": "cpu"}, "source_refs": []},
         {"id": "api-server", "role": "node", "label": "API Server", "props": {"glyph": "server"}, "source_refs": []},
         {"id": "pods", "role": "endpoint", "label": "Pods", "props": {"glyph": "package"}, "source_refs": []},
@@ -55,11 +55,9 @@
         {"id": "job-status", "role": "decision", "label": "协调结果", "props": {"text": "desired: Complete · current: Pending", "tone": "danger", "align": "left"}, "source_refs": []}
       ],
       "steps": [
-        {"id": "watch-job", "title": "观察 Job", "description": "Job Controller 观察到新的 Job，并从对象 spec 读取期望完成状态。", "highlights": ["job", "watch", "job-controller"], "object_states": {"reconcile": {"state": "发现新 Job"}}, "key_points": ["观察资源", "读取期望状态"]},
-        {"id": "compare-job", "title": "发现状态差异", "description": "当前没有执行任务的 Pod，Controller 判断当前状态还没有满足 Job。", "highlights": ["job-controller", "job-status"], "object_states": {"job-status": {"text": "差异: 缺少工作 Pod", "tone": "danger"}}, "key_points": ["期望完成", "当前未完成"]},
-        {"id": "request-pods", "title": "请求创建 Pod", "description": "Controller 不直接运行容器，而是通过 API Server 提交创建 Pod 的变更。", "highlights": ["job-controller", "request", "reconcile", "api-server"], "object_states": {"request": {"active": true}, "reconcile": {"state": "创建 Pod"}}, "key_points": ["API Server", "声明式变更"]},
-        {"id": "pods-run", "title": "Pod 执行任务", "description": "控制平面的其他组件响应新信息，Pod 被调度并完成 Job 所需的工作。", "highlights": ["api-server", "create", "pods"], "object_states": {"create": {"active": true}, "pod-event": {"state": "Running"}}, "key_points": ["调度运行", "完成工作"]},
-        {"id": "report-complete", "title": "回写完成状态", "description": "完成状态重新进入协调循环，Controller 把 Job 更新为 Finished。", "highlights": ["pods", "status", "pod-event", "job-controller", "job-status"], "object_states": {"status": {"active": true}, "pod-event": {"state": "Succeeded"}, "job-status": {"text": "desired = current · Finished", "tone": "success"}}, "key_points": ["报告当前状态", "继续协调"]}
+        {"id": "watch-job", "title": "观察 Job", "description": "Job Controller 观察到新的 Job，并从对象 spec 读取期望完成状态。", "highlights": ["job", "watch", "job-controller"], "object_states": {"reconcile": {"state": "发现新 Job"}}, "key_points": ["观察资源", "读取期望状态"], "source_refs": ["controller-source"]},
+        {"id": "request-pods", "title": "请求创建 Pod", "description": "Controller 判断状态差异后，通过 API Server 提交创建 Pod 的声明式变更。", "highlights": ["job-controller", "job-status", "request", "reconcile", "api-server"], "object_states": {"job-status": {"text": "差异: 缺少工作 Pod", "tone": "danger"}, "request": {"active": true}, "reconcile": {"state": "创建 Pod"}}, "key_points": ["期望完成", "当前未完成", "API Server", "声明式变更"], "source_refs": ["controller-source"]},
+        {"id": "report-complete", "title": "执行并回写状态", "description": "Pod 被创建并完成工作，完成状态重新进入协调循环，Controller 将 Job 更新为 Finished。", "highlights": ["api-server", "create", "pods", "status", "pod-event", "job-controller", "job-status"], "object_states": {"create": {"active": true}, "status": {"active": true}, "pod-event": {"state": "Succeeded"}, "job-status": {"text": "desired = current · Finished", "tone": "success"}}, "key_points": ["调度运行", "完成工作", "报告当前状态", "继续协调"], "source_refs": ["controller-source"]}
       ],
       "controls": [
         {"id": "reconcile-speed", "type": "slider", "label": "协调速度", "target_property": "reconcile.speed", "min": 0.2, "max": 1.5, "default": 0.7, "step": 0.05, "unit": "x"},

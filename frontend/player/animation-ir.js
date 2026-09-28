@@ -1,5 +1,5 @@
 import { cloneValue } from "./property-registry.js";
-import { DEFAULT_FPS, validateFps } from "./timing.js";
+import { DEFAULT_FPS, validateFps } from "./frame-math.js";
 
 export const ANIMATION_IR_VERSION = 1;
 
@@ -34,6 +34,7 @@ export function normalizeRenderSpec(spec) {
       eyebrow: spec.eyebrow ?? "",
       sourceFormat: "render-spec-v1",
     },
+    citations: [],
     scenes: spec.scenes.map((scene) => normalizeLegacyScene(scene)),
   };
   return validateAnimationIR(ir);
@@ -61,6 +62,8 @@ export function validateAnimationIR(ir) {
   ir.fps ??= DEFAULT_FPS;
   validateFps(ir.fps);
   validateStage(ir.stage);
+  ir.citations ??= [];
+  if (!Array.isArray(ir.citations)) throw new Error("AnimationIR citations must be an array");
   if (!Array.isArray(ir.scenes) || ir.scenes.length === 0) {
     throw new Error("AnimationIR must contain at least one scene");
   }
@@ -116,7 +119,14 @@ function normalizeLegacyScene(scene) {
     },
     nodes,
     camera: { id: "main", position: { x: 0, y: 0 }, zoom: 1, rotation: 0 },
-    beats: [],
+    beats: (scene.steps ?? []).map((step) => ({
+      id: step.id,
+      title: step.title ?? "",
+      narration: step.narration ?? "",
+      sourceRefs: cloneValue(step.source_refs ?? []),
+      durationInFrames: DEFAULT_FPS * 3,
+      timeline: { items: [], effects: [] },
+    })),
     timeline: { items: [], effects: [] },
     interactions: cloneValue(scene.controls ?? []),
     legacy: cloneValue(scene),
@@ -157,8 +167,17 @@ function validateScene(scene) {
     beat.timeline ??= { items: [], effects: [] };
     beat.timeline.items ??= [];
     beat.timeline.effects ??= [];
+    beat.sourceRefs ??= [];
+    beat.durationInFrames ??= irDefaultDuration(scene);
+    if (!Number.isInteger(beat.durationInFrames) || beat.durationInFrames <= 0) {
+      throw new Error(`Animation beat ${beat.id} durationInFrames must be a positive integer`);
+    }
   }
   scene.interactions ??= [];
+}
+
+function irDefaultDuration(_scene) {
+  return DEFAULT_FPS * 3;
 }
 
 function validateStage(stage) {

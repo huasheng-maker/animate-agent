@@ -2,6 +2,10 @@
 
 Animate Agent 是一个把技术文档、网页、文本和教学资料转换为可交互教学内容的原型项目。它的目标不是生成普通摘要页，而是逐步构建 **Interactive Knowledge Movie（交互式知识影片）**：用受控的数据结构描述知识、镜头、视觉对象和交互，再由前端渲染器播放。
 
+本阶段教学验证：启动前端后打开 [`/demos/lidar`](http://localhost:3000/demos/lidar)，体验“激光测距 → 安全膨胀 → A* 搜索 → 绕障行驶”。这是无需模型调用的手工教学 Demo，支持移动货架、窄门/封路、机器人半径与量程等交互；复用现有 Remotion、AnimationIR Runtime 和 Canvas 渲染器。[实现核查、Visual Plan 设计与验证报告](docs/lidar-demo-report.md)。
+
+小艺云插件接入的接口、观看页和控制台配置步骤见 [小艺接入指南](docs/xiaoyi-integration.md)。
+
 当前仓库仍处于原型阶段，已经具备：
 
 - 可直接打开的静态首页与机器人避障交互 Demo；
@@ -200,6 +204,11 @@ npm --prefix frontend run dev
 ```
 
 只有在明确需要浏览器直接跨域请求 FastAPI 时，才设置公开变量 `NEXT_PUBLIC_API_BASE_URL`。
+
+后端路径默认从已安装源码推导，不依赖启动命令的当前目录。部署时可以用
+`ANIMATE_AGENT_PROJECT_ROOT`、`ANIMATE_AGENT_CONFIG_PATH`、`ANIMATE_AGENT_ENV_FILE`、
+`ANIMATE_AGENT_DATA_DIR`、`ANIMATE_AGENT_ASSETS_DIR` 和 `ANIMATE_AGENT_CACHE_DIR`
+分别覆盖项目根、配置、环境文件、数据、资源与缓存目录；相对覆盖值以项目根为基准解析。
 
 ### 2.5 方式三：在 Python 中生成动画 Scene Spec
 

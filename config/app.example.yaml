@@ -14,20 +14,27 @@ animation:
     - canvas_2d
     - svg_2d
     - three_3d
+  # 无音轨版本使用阅读速度为每个视觉节拍确定持续帧数。
+  cjk_chars_per_second: 8.0
+  latin_words_per_minute: 180.0
+  min_beat_seconds: 3.0
+  max_reading_seconds: 12.0
+  beat_end_hold_seconds: 0.6
 
 agent:
-  # 单个 storyboard 场景里的教学节拍（step）数量上限，与下面的下限一起读。
-  # 注意：这是「一幕里的节拍数」，不是「文档里的幕数」——幕数由 LessonIR 的覆盖关系决定。
+  # 整部讲解动画的教学节拍（step）总数上限。
   max_storyboard_steps: 7
   require_visual_objects: true
   require_interactive_demo: true
 
 storyboard:
-  # 单个场景的节拍数下限。上限沿用上面的 agent.max_storyboard_steps。
+  # 整部讲解动画的节拍总数下限。上限沿用上面的 agent.max_storyboard_steps。
   min_storyboard_steps: 3
   # 比 knowledge 的 0.4 低：这一层是 schema 密集型，创作部分上游已经做完。
   temperature: 0.3
   max_retries: 3
+  # 如果前面的次数都用于修 schema，为 intent 模式保留的语义修复次数。
+  intent_semantic_repair_attempts: 1
 
 llm:
   base_url: https://api.deepseek.com
@@ -44,4 +51,3 @@ knowledge:
   # 生成后再调一次模型，核对「原文有没有被漏讲、课程有没有编原文没有的东西」。
   # 每次生成多一次 LLM 调用，默认关闭；打开前建议先用真实模型验证误报率。
   verify_fidelity: false
-

@@ -14,6 +14,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from animate_agent.observability import animation_run_id
+from animate_agent.paths import ENV_FILE
 
 logger = logging.getLogger("uvicorn.error.animate_agent.llm")
 
@@ -21,8 +22,6 @@ logger = logging.getLogger("uvicorn.error.animate_agent.llm")
 #: directory so `animate-agent` reads the same file from anywhere it is invoked.
 #: Written by a developer, never committed: `.gitignore` covers `.env` and
 #: `.env.*` except the `*.example` files.
-ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
-
 #: Output budget for one chat call. The configured endpoint serves a *reasoning*
 #: model: `max_tokens` covers the hidden reasoning plus the visible answer, and
 #: on the storyboard prompt the reasoning alone runs to ~23k tokens. A tight
@@ -126,6 +125,9 @@ class LLMClient:
             len(messages),
             max_tokens,
         )
+        from animate_agent.animation.progress import report_progress
+
+        report_progress("model_call")
         request_done = asyncio.Event()
         progress_task = asyncio.create_task(
             _log_llm_waiting(request_done, run_id=run_id, started_at=started_at)
@@ -134,6 +136,7 @@ class LLMClient:
         try:
             response = await self._client.post(url, json=payload, headers=headers)
             if response.status_code == 429:
+                report_progress("retry")
                 logger.warning(
                     "llm run=%s status=rate_limited elapsed_ms=%d retry_in_seconds=3",
                     run_id,

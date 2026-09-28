@@ -40,6 +40,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from animate_agent.animation_ir.models import AnimationIR
+from animate_agent.mechanisms import MechanismPlan
 from animate_agent.storyboard.models import PropValue, VisualPattern
 
 #: Bumped when a change would make an older player mis-draw a newer spec. The
@@ -295,6 +296,7 @@ class RenderStep(_Model):
     narration: str = ""
     highlights: list[str] = Field(default_factory=list)
     states: dict[str, dict[str, PropValue]] = Field(default_factory=dict)
+    source_refs: list[str] = Field(default_factory=list)
 
 
 class RenderControl(_Model):
@@ -328,6 +330,7 @@ class RenderScene(_Model):
     """One drawable scene: geometry resolved, semantics intact."""
 
     id: str = Field(min_length=1)
+    mechanism: MechanismPlan | None = None
     title: str = ""
     teaching_goal: str = ""
     learning_question: str = ""

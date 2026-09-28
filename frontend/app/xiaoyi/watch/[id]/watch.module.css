@@ -1,0 +1,10 @@
+.shell { min-height: 100vh; color: #f4f7ee; background: radial-gradient(circle at 20% 10%, #17302d, transparent 40%), #050507; padding: 24px; }
+.shell header { max-width: 960px; margin: 0 auto; display: flex; justify-content: space-between; gap: 16px; color: #9da3ae; font-size: 12px; letter-spacing: .1em; }
+.shell header a { color: #ccff00; text-decoration: none; font-weight: 800; }
+.card { max-width: 960px; margin: 10vh auto 0; padding: clamp(24px, 6vw, 64px); border: 1px solid rgba(204,255,0,.22); background: rgba(15,16,22,.92); }
+.eyebrow { color: #00eaf2; font-size: 12px; letter-spacing: .16em; }
+.card h1 { margin: 12px 0 18px; font-size: clamp(32px, 7vw, 68px); line-height: 1.15; }
+.status { font-size: clamp(18px, 3vw, 24px); }
+.time { color: #9da3ae; font-variant-numeric: tabular-nums; }
+.play { display: inline-block; margin-top: 24px; padding: 14px 20px; background: #ccff00; color: #050507; font-weight: 800; text-decoration: none; }
+.play:hover { background: #e9ff86; }

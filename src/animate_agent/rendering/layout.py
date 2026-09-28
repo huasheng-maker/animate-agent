@@ -1416,6 +1416,7 @@ def _to_step(step: StoryboardStep) -> RenderStep:
         narration=step.description,
         highlights=list(step.highlights),
         states={key: dict(value) for key, value in step.object_states.items()},
+        source_refs=list(step.source_refs),
     )
 
 
@@ -1428,6 +1429,27 @@ def _to_control(control: StoryboardControl) -> RenderControl:
 # --------------------------------------------------------------------------
 # Entry points
 # --------------------------------------------------------------------------
+
+
+def _mechanism_controls(scene: StoryboardScene) -> list[RenderControl]:
+    plan = scene.mechanism
+    if plan is None:
+        return [_to_control(control) for control in scene.controls]
+    if plan.kind == "language_model":
+        name, label, low, high, value = "temperature", "采样温度", .1, 2., plan.temperature
+    elif plan.kind == "neural_network":
+        name, label, low, high, value = "input", "输入 x₁", -10., 10., plan.inputs[0]
+    elif plan.kind == "linear_transform":
+        name, label, low, high, value = "blend", "变换程度", 0., 1., 1.
+    elif plan.kind == "derivative":
+        name, label, low, high, value = "x", "观察位置 x", -2., 2., plan.x
+    else:
+        return [RenderControl(id="mechanism-loss", type="toggle", label="首包丢失",
+                              target_property=f"{scene.id}-mechanism.loss",
+                              default=float(plan.drop_first))]
+    return [RenderControl(id=f"mechanism-{name}", type="slider", label=label,
+                          target_property=f"{scene.id}-mechanism.{name}", min=low, max=high,
+                          default=value, step=.05)]
 
 
 def layout_scene(scene: StoryboardScene, *, stage: RenderStage | None = None) -> RenderScene:
@@ -1459,6 +1481,7 @@ def layout_scene(scene: StoryboardScene, *, stage: RenderStage | None = None) ->
 
     return RenderScene(
         id=scene.id,
+        mechanism=scene.mechanism,
         # `StoryboardScene` has no title of its own — the beats carry the words.
         teaching_goal=scene.teaching_goal,
         learning_question=scene.learning_question,
@@ -1501,7 +1524,7 @@ def layout_scene(scene: StoryboardScene, *, stage: RenderStage | None = None) ->
         },
         elements=elements,
         steps=[_to_step(step) for step in scene.steps],
-        controls=[_to_control(control) for control in scene.controls],
+        controls=_mechanism_controls(scene),
         params=dict(scene.params),
     )
 

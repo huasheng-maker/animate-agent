@@ -18,6 +18,7 @@ from animate_agent.animation.artifacts import (
     persist_storyboard_ir,
     reset_run_directory,
 )
+from animate_agent.animation.progress import report_progress
 from animate_agent.animation_ir.compiler import compile_storyboard
 from animate_agent.documents.builder import DocumentIRBuilder
 from animate_agent.documents.service import ingest_source
@@ -45,10 +46,11 @@ async def generate_animation(
     output_dir: Path = DEFAULT_RUNS_DIR,
     resolver: SourceResolver | None = None,
     document_builder: DocumentIRBuilder | None = None,
+    job_id: str | None = None,
 ) -> RenderSpec:
     """Run a source through evidence/lesson planning to StoryboardIR and RenderSpec."""
 
-    run_id = uuid.uuid4().hex[:12]
+    run_id = job_id or uuid.uuid4().hex[:12]
     run_directory = output_dir / run_id
     directory_token = bind_run_directory(run_directory)
     context_token = bind_animation_run_id(run_id)
@@ -78,6 +80,7 @@ async def generate_animation(
         )
 
         stage = "source_ingestion"
+        report_progress("stage", stage=stage)
         stage_started_at = time.perf_counter()
         logger.info("animation run=%s stage=%s status=started", run_id, stage)
         document = await ingest_source(
@@ -87,6 +90,19 @@ async def generate_animation(
             builder=document_builder,
         )
         persist_document_ir(document)
+        preview = {
+            "document_id": document.document_id,
+            "title": document.title,
+            "sections": [
+                {"id": section.id, "title": section.title, "level": section.level,
+                 "blocks": [
+                     {"id": block.id, "type": block.type, "text": block.text[:800],
+                      "language": block.language, "source_ref": block.source_ref}
+                     for block in section.blocks[:2]
+                 ]} for section in document.sections[:24]
+            ],
+        }
+        report_progress("artifact", name="document", value=preview, stage=stage)
         logger.info(
             "animation run=%s stage=%s status=completed elapsed_ms=%d document_id=%s "
             "sections=%d",
@@ -102,6 +118,7 @@ async def generate_animation(
             # adapter. Keep the user's question as the learning intent and make
             # one successful generation call directly against the evidence.
             stage = "intent_storyboard_generation"
+            report_progress("stage", stage=stage)
             stage_started_at = time.perf_counter()
             logger.info(
                 "animation run=%s stage=%s status=started document_id=%s",
@@ -129,6 +146,7 @@ async def generate_animation(
             # URL/file/text inputs retain the reviewed course-generation path
             # until they receive an explicit user focus contract.
             stage = "lesson_generation"
+            report_progress("stage", stage=stage)
             stage_started_at = time.perf_counter()
             logger.info(
                 "animation run=%s stage=%s status=started document_id=%s",
@@ -137,6 +155,12 @@ async def generate_animation(
                 document.document_id,
             )
             lesson = await generate_lesson(document, output_dir=run_directory)
+            report_progress("artifact", name="lesson", stage=stage, value={
+                "title": lesson.title, "scenes": [
+                    {"id": scene.id, "title": scene.title, "summary": scene.objective}
+                    for scene in lesson.scenes
+                ],
+            })
             persist_lesson_ir(lesson)
             logger.info(
                 "animation run=%s stage=%s status=completed elapsed_ms=%d "
@@ -149,6 +173,7 @@ async def generate_animation(
             )
 
             stage = "storyboard_generation"
+            report_progress("stage", stage=stage)
             stage_started_at = time.perf_counter()
             logger.info(
                 "animation run=%s stage=%s status=started lesson_id=%s",
@@ -170,7 +195,13 @@ async def generate_animation(
                 len(storyboard.scenes),
             )
 
+        report_progress("artifact", name="storyboard", stage=stage, value={
+            "title": storyboard.title, "scenes": [
+                {"id": scene.id, "title": scene.teaching_goal} for scene in storyboard.scenes
+            ],
+        })
         stage = "layout"
+        report_progress("stage", stage=stage)
         stage_started_at = time.perf_counter()
         logger.info(
             "animation run=%s stage=%s status=started storyboard_id=%s",
@@ -188,6 +219,7 @@ async def generate_animation(
         )
 
         stage = "animation_ir_compile"
+        report_progress("stage", stage=stage)
         stage_started_at = time.perf_counter()
         logger.info(
             "animation run=%s stage=%s status=started storyboard_id=%s",
@@ -195,7 +227,7 @@ async def generate_animation(
             stage,
             storyboard.storyboard_id,
         )
-        spec.animation_ir = compile_storyboard(storyboard, render_spec=spec)
+        spec.animation_ir = compile_storyboard(storyboard, document=document, render_spec=spec)
         persist_animation_ir(spec.animation_ir)
         logger.info(
             "animation run=%s stage=%s status=completed elapsed_ms=%d animation_scenes=%d",
@@ -206,6 +238,7 @@ async def generate_animation(
         )
 
         stage = "persist"
+        report_progress("stage", stage=stage)
         stage_started_at = time.perf_counter()
         logger.info("animation run=%s stage=%s status=started", run_id, stage)
         destination = persist_render_spec(spec)

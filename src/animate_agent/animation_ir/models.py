@@ -12,6 +12,7 @@ from typing import Annotated, Literal, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from animate_agent.mechanisms import MechanismPlan
 from animate_agent.storyboard.models import VisualPattern
 
 ANIMATION_IR_VERSION: Literal[1] = 1
@@ -35,6 +36,14 @@ class AnimationClaim(_Model):
     id: str = Field(min_length=1)
     text: str = Field(min_length=1)
     source_refs: list[str] = Field(min_length=1)
+
+
+class AnimationCitation(_Model):
+    id: str = Field(min_length=1)
+    title: str = ""
+    locator: str = ""
+    excerpt: str = ""
+    url: str | None = None
 
 
 class AnimationMetadata(_Model):
@@ -220,11 +229,14 @@ class AnimationBeat(_Model):
     id: str = Field(min_length=1)
     title: str = ""
     narration: str = ""
+    sourceRefs: list[str] = Field(default_factory=list)
+    durationInFrames: int = Field(default=1, ge=1)
     timeline: AnimationTimeline = Field(default_factory=AnimationTimeline)
 
 
 class AnimationScene(_Model):
     id: str = Field(min_length=1)
+    mechanism: MechanismPlan | None = None
     metadata: SceneMetadata
     nodes: list[AnimationNode] = Field(min_length=1)
     camera: AnimationCamera = Field(default_factory=AnimationCamera)
@@ -246,6 +258,7 @@ class AnimationIR(_Model):
     fps: float = Field(default=60, gt=0, le=240)
     stage: AnimationStage
     metadata: AnimationMetadata
+    citations: list[AnimationCitation] = Field(default_factory=list)
     scenes: list[AnimationScene] = Field(min_length=1)
 
     @model_validator(mode="after")

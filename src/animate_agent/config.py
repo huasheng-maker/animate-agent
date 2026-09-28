@@ -32,14 +32,18 @@ class AnimationSettings(BaseModel):
 
     default_renderer: str = "canvas_2d"
     allowed_renderers: tuple[str, ...] = ("canvas_2d", "svg_2d", "three_3d")
+    cjk_chars_per_second: float = Field(default=8.0, gt=0)
+    latin_words_per_minute: float = Field(default=180.0, gt=0)
+    min_beat_seconds: float = Field(default=3.0, gt=0)
+    max_reading_seconds: float = Field(default=12.0, gt=0)
+    beat_end_hold_seconds: float = Field(default=0.6, ge=0)
 
 
 class StoryboardSettings(BaseModel):
     """Tunable parameters for the Storyboard Agent and its validation pass.
 
-    Read from **two** YAML blocks: the step limits and demo requirements were
-    already reserved under `agent:`, and only the model-call knobs are new under
-    `storyboard:`. Splitting them keeps the reservation from being restated.
+    Read from **two** YAML blocks for backwards compatibility. Step limits now
+    apply to the whole movie rather than to every scene.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -49,6 +53,7 @@ class StoryboardSettings(BaseModel):
     require_visual_objects: bool = True
     require_interactive_demo: bool = True
     max_retries: int = Field(default=3, ge=1)
+    intent_semantic_repair_attempts: int = Field(default=1, ge=0, le=3)
     temperature: float = Field(default=0.3, ge=0.0, le=2.0)
 
 

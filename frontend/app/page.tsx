@@ -7,6 +7,7 @@ import {
   type KnowledgeGraphNode,
 } from "./components/KnowledgeGraph";
 import { useSourceWorkflow } from "./hooks/useSourceWorkflow";
+import { GenerationProgress } from "./components/GenerationProgress";
 
 type DocumentBlock = {
   id: string;
@@ -395,7 +396,8 @@ export default function Home() {
 
   const blockCount = workflow.document?.sections.reduce((sum, section) => sum + section.blocks.length, 0) ?? 0;
   const busy = workflow.loading !== null;
-  const phase = busy ? "PROCESSING" : workflow.document ? "MAPPED" : "STANDBY";
+  const generating = workflow.generation.active || workflow.generation.submitting;
+  const phase = generating ? "GENERATING" : busy ? "PROCESSING" : workflow.document ? "MAPPED" : "STANDBY";
 
   return (
     <main className="studio-shell">
@@ -411,10 +413,11 @@ export default function Home() {
           <span className="pipeline-clock">{workflow.document ? `${graph.nodes.length} NODES` : "READY 00:00"}</span>
         </div>
         <div className="topbar-actions">
+          <a className="model-badge" href="/demos/lidar">雷达绕障实验</a>
           <span className="model-badge">IR / RENDER 01</span>
           <button className="icon-button inspector-toggle" onClick={() => setInspectorOpen(true)} type="button" aria-label="Open inspector"><Icon name="grid" /></button>
-          <button className="top-generate" disabled={busy || !workflow.hasInput} onClick={workflow.generateAnimation} type="button">
-            <Icon name="spark" />{workflow.loading === "animation" ? "GENERATING" : "GENERATE MOVIE"}
+          <button className="top-generate" disabled={busy || generating || !workflow.hasInput} onClick={workflow.generateAnimation} type="button">
+            <Icon name="spark" />{generating ? "GENERATING" : "GENERATE MOVIE"}
           </button>
         </div>
       </header>
@@ -449,7 +452,7 @@ export default function Home() {
             </div>
             <div className="source-actions">
               <button className="action-secondary" disabled={busy} type="submit">{workflow.loading === "document" ? "RESOLVING…" : "MAP DOCUMENT"}</button>
-              <button className="action-primary" disabled={busy || !workflow.hasInput} onClick={workflow.generateAnimation} type="button"><span>{workflow.loading === "animation" ? "GENERATING" : "CREATE"}</span><Icon name="arrow" /></button>
+              <button className="action-primary" disabled={busy || generating || !workflow.hasInput} onClick={workflow.generateAnimation} type="button"><span>{generating ? "GENERATING" : "CREATE"}</span><Icon name="arrow" /></button>
             </div>
           </form>
 
@@ -459,14 +462,14 @@ export default function Home() {
             <p>观察状态、比较差异、执行动作，将结果反馈至下一轮协调。</p>
             <div className="example-buttons">
               <button disabled={busy} onClick={() => workflow.openControllerExample(true)} type="button">{workflow.loading === "preview" ? "LOADING" : "INSTANT PREVIEW"}</button>
-              <button disabled={busy} onClick={() => workflow.openControllerExample(false)} type="button">{workflow.loading === "controller" ? "GENERATING" : "GENERATE"}</button>
+              <button disabled={busy || generating} onClick={() => workflow.openControllerExample(false)} type="button">{generating ? "GENERATING" : "GENERATE"}</button>
               <button aria-label="Open latest generated Controller result" className="mini-button" disabled={busy} onClick={workflow.openLatestControllerAnimation} type="button">↗</button>
             </div>
           </section>
           <div className="dock-footer"><span>LOCAL-FIRST</span><span>VALIDATED IR</span><span>NO EVAL</span></div>
         </aside>
 
-        <section className="graph-stage glass-panel" aria-labelledby="graph-title">
+        <section className={`graph-stage glass-panel ${workflow.generation.job || workflow.generation.submitting ? "has-generation" : ""}`} aria-labelledby="graph-title">
           <div className="stage-heading">
             <div><span className="panel-index">/ 02 · KNOWLEDGE FIELD</span><h2 id="graph-title">{workflow.document ? workflow.document.title : "WAITING FOR SIGNAL"}</h2></div>
             <div className="stage-metrics">
@@ -475,9 +478,10 @@ export default function Home() {
               <span><strong>100%</strong> LOCAL</span>
             </div>
           </div>
-          <KnowledgeGraph data={graph} selectedId={selectedNode?.id ?? null} onSelect={selectNode} busy={busy} />
+          <GenerationProgress generation={workflow.generation} onPlay={workflow.openGeneratedMovie} onRetry={workflow.generateAnimation} canRetry={workflow.hasInput && !busy} />
+          {(!workflow.generation.job || workflow.generation.collapsed) && <KnowledgeGraph data={graph} selectedId={selectedNode?.id ?? null} onSelect={selectNode} busy={busy} />}
           <div className="stage-hud stage-hud-left" aria-hidden="true"><span>X 33.917</span><span>Y 08.402</span><span>Z 01.000</span></div>
-          <div className="stage-hud stage-hud-right"><span className={busy ? "is-live" : ""}>{busy ? "AGENT RUNNING" : "INTERACTIVE"}</span><span>TAB / ← → TO NAVIGATE</span></div>
+          <div className="stage-hud stage-hud-right"><span className={busy || generating ? "is-live" : ""}>{busy || generating ? "AGENT RUNNING" : "INTERACTIVE"}</span><span>TAB / ← → TO NAVIGATE</span></div>
           {busy && <div className="processing-overlay" role="status" aria-live="polite"><span className="processing-ring" /><strong>{workflow.loading === "document" ? "MAPPING KNOWLEDGE" : "COMPOSING MOTION"}</strong><span>Deterministic pipeline active</span></div>}
         </section>
 

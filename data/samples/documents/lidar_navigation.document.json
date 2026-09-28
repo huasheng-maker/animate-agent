@@ -1,0 +1,13 @@
+{
+  "document_id": "lidar-demo-evidence",
+  "title": "激光测距与栅格规划：手工教学模型说明",
+  "source": {"id": "authored-demo", "type": "text", "title": "人工审核的简化模型；不是模型生成或爬取的文档"},
+  "sections": [{
+    "id": "model-notes", "title": "原理与简化条件", "level": 1,
+    "blocks": [
+      {"id": "lidar-model", "type": "paragraph", "text": "本例将二维激光束建模为射线与实心轴对齐矩形的最近交点，量程外无返回。180 束扫描覆盖 360 度。障碍占满栅格，射线穿过的格记为空闲，命中格为占用，其他格保持未知。这是理想无噪声模型，不进行 SLAM 或概率地图融合。"},
+      {"id": "configuration-space", "type": "paragraph", "text": "圆盘机器人需要对障碍预留机器人半径和安全余量，才能将机器人中心作为路径搜索的点。本例还额外保守扩张半个栅格，使相邻格中心之间的连续线段保持净空。因此可能拒绝一些连续几何下实际可行的路径。", "metadata": {"reference_url": "https://docs.nav2.org/rolling/configuration_and_development/first_time_robot_setup_guide/footprint/setup_footprint/"}},
+      {"id": "astar-grid", "type": "paragraph", "text": "四邻接栅格采用单位边代价和曼哈顿启发式，A* 按 g+h 搜索当前允许通行的格，得到最短栅格路线或无路径结果。默认规划地图来自已知静态环境，不是由一次扫描完整重建；单帧模式将未知格也视为禁行。", "metadata": {"reference_url": "https://theory.stanford.edu/~amitp/GameProgramming/Heuristics.html"}}
+    ]
+  }]
+}

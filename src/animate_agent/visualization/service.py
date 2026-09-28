@@ -35,6 +35,7 @@ async def generate_intent_storyboard(
             limits=build_limits(),
             allowed_renderers=animation_settings.allowed_renderers,
             max_retries=storyboard_settings.max_retries,
+            semantic_repair_attempts=storyboard_settings.intent_semantic_repair_attempts,
             temperature=storyboard_settings.temperature,
             debug_dir=output_dir,
         )

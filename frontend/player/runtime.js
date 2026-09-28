@@ -7,7 +7,7 @@ import {
 } from "./property-registry.js";
 import { compileEffects } from "./effects.js";
 import { compileTimeline, sampleTimeline, sampleTimelineFrame } from "./timeline.js";
-import { DEFAULT_FPS, frameToSeconds, secondsToFrame, validateFps } from "./timing.js";
+import { DEFAULT_FPS, frameToSeconds, secondsToFrame, validateFps } from "./frame-math.js";
 
 /** A deterministic, DOM-free and renderer-free runtime for one animation scene. */
 export function createAnimationRuntime(scene, { fps = DEFAULT_FPS } = {}) {

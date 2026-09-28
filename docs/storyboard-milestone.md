@@ -78,15 +78,12 @@ S1–S4 是**交付**顺序；下面是把 S2/S3 内部再拆细后的**搭建**
 
 ### 怎么验收（浏览器检查与 pytest 分开，按 Standing Correction）
 
-```
-.\.venv\Scripts\python.exe -m http.server 8000      # 在仓库根目录
-```
-
-打开 `http://127.0.0.1:8000/frontend/player/index.html`（默认是 `lane` 基线画面；
-加 `?spec=/data/generated/render-ros_pub_sub.json` 看 ROS 链路）。确认三件事：
+分别启动后端 API 与 `frontend` 下的 Next.js 应用，然后打开
+`http://127.0.0.1:3000/player?spec=/data/generated/render-robot_obstacle_avoidance.json`
+（换成 `render-ros_pub_sub.json` 可看 ROS 链路）。确认三件事：
 
 1. **画面出现**：小车（带朝向三角）、扇形雷达射线、虚线安全圈、两个八角障碍、车道网格。
-2. **节拍可单步**：点「▶ 下一拍」或按 `→`，高亮跟着换到对应的对象。
+2. **节拍可单步**：点「下一拍」，高亮跟着换到对应的对象。
 3. **滑杆真的改结果**：拖「车速 / 雷达半径 / 安全距离」，**画面随之改变**——不是只有数字变。
    这是项目规则「交互参数必须改变结果」在浏览器里的那一半。
 

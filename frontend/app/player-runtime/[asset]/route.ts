@@ -2,15 +2,14 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 const contentTypes: Record<string, string> = {
-  "index.html": "text/html; charset=utf-8",
   "player.css": "text/css; charset=utf-8",
-  "player.js": "text/javascript; charset=utf-8",
   "atoms.js": "text/javascript; charset=utf-8",
   "behaviors.js": "text/javascript; charset=utf-8",
   "primitives.js": "text/javascript; charset=utf-8",
   "registry.js": "text/javascript; charset=utf-8",
   "stage.js": "text/javascript; charset=utf-8",
-  "timing.js": "text/javascript; charset=utf-8",
+  "frame-math.js": "text/javascript; charset=utf-8",
+  "composition.js": "text/javascript; charset=utf-8",
   "animation-ir.js": "text/javascript; charset=utf-8",
   "property-registry.js": "text/javascript; charset=utf-8",
   "timeline.js": "text/javascript; charset=utf-8",

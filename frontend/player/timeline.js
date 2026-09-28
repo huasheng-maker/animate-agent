@@ -5,7 +5,7 @@ import {
   validatePropertyValue,
 } from "./property-registry.js";
 import { resolveEase, SUPPORTED_EASINGS } from "./gsap-easing.js";
-import { DEFAULT_FPS, secondsToFrame, validateFps } from "./timing.js";
+import { DEFAULT_FPS, secondsToFrame, validateFps } from "./frame-math.js";
 
 export function compileTimeline(timeline, nodes, { fps = DEFAULT_FPS } = {}) {
   const resolvedFps = validateFps(fps);

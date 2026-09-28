@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useAnimationJob } from "./useAnimationJob";
 
 export type DocumentBlock = {
   id: string;
@@ -40,6 +41,7 @@ function apiEndpoint(kind: "documents" | "animations", mode: InputMode) {
 }
 
 export function useSourceWorkflow() {
+  const generation = useAnimationJob();
   const [mode, setMode] = useState<InputMode>("url");
   const [url, setUrl] = useState(
     "https://raw.githubusercontent.com/ManimCommunity/manim/main/docs/source/tutorials/quickstart.rst",
@@ -50,6 +52,13 @@ export function useSourceWorkflow() {
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState<LoadingState>(null);
+  const previewDocument = generation.job?.artifacts.document;
+  useEffect(() => {
+    if (previewDocument) {
+      setDocument(previewDocument);
+      setActiveSectionId(previewDocument.sections[0]?.id ?? null);
+    }
+  }, [previewDocument?.document_id]);
 
   const activeSection = useMemo(
     () => document?.sections.find((section) => section.id === activeSectionId) ?? null,
@@ -116,15 +125,14 @@ export function useSourceWorkflow() {
   }
 
   async function generateAnimation() {
-    setLoading("animation");
     setError("");
+    setDocument(null);
     try {
-      const response = await fetch(apiEndpoint("animations", mode), sourceRequest());
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { detail?: string } | null;
-        throw new Error(payload?.detail ?? `Request failed (${response.status})`);
-      }
-      openPlayer((await response.json()) as RenderSpec);
+      const request = mode === "file" ? sourceRequest() : {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, value: mode === "url" ? url : query }),
+      };
+      await generation.start(mode, request);
     } catch (reason) {
       setError(
         reason instanceof TypeError
@@ -138,6 +146,14 @@ export function useSourceWorkflow() {
   }
 
   async function openControllerExample(preview: boolean) {
+    if (!preview) {
+      setDocument(null);
+      await generation.start("example", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "example", value: "controller" }),
+      });
+      return;
+    }
     setLoading(preview ? "preview" : "controller");
     setError("");
     try {
@@ -178,6 +194,15 @@ export function useSourceWorkflow() {
     }
   }
 
+  async function openGeneratedMovie() {
+    if (!generation.job) return;
+    try {
+      const response = await fetch(`/api/animation-jobs/${generation.job.run_id}/result`, { cache: "no-store" });
+      if (!response.ok) throw new Error("无法读取动画结果，请稍后重试。");
+      openPlayer(await response.json() as RenderSpec);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "无法打开动画"); }
+  }
+
   return {
     mode,
     url,
@@ -186,7 +211,9 @@ export function useSourceWorkflow() {
     document,
     activeSection,
     activeSectionId,
-    error,
+    error: error || generation.error,
+    generation,
+    openGeneratedMovie,
     loading,
     hasInput,
     setUrl,

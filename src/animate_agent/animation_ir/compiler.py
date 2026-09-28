@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import math
+import re
+from dataclasses import dataclass
 from typing import Literal
 
 from animate_agent.animation_ir.models import (
@@ -9,6 +12,7 @@ from animate_agent.animation_ir.models import (
     AnimatableValue,
     AnimationBeat,
     AnimationCamera,
+    AnimationCitation,
     AnimationClaim,
     AnimationGroup,
     AnimationIR,
@@ -28,47 +32,91 @@ from animate_agent.animation_ir.models import (
     TimelineItem,
     Vector2,
 )
+from animate_agent.config import AnimationSettings, load_animation_settings
+from animate_agent.documents.models import DocumentIR, DocumentSource
 from animate_agent.rendering.layout import layout_storyboard
 from animate_agent.rendering.models import RenderScene, RenderSpec, RenderStage, RenderStep
 from animate_agent.storyboard.models import StoryboardIR
+
+_CJK = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]")
+_LATIN_WORD = re.compile(r"[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*")
+_SPACE = re.compile(r"\s+")
+
+
+@dataclass(frozen=True, slots=True)
+class BeatTimingPolicy:
+    cjk_chars_per_second: float = 8.0
+    latin_words_per_minute: float = 180.0
+    min_beat_seconds: float = 3.0
+    max_reading_seconds: float = 12.0
+    beat_end_hold_seconds: float = 0.6
+
+    @classmethod
+    def from_settings(cls, settings: AnimationSettings) -> BeatTimingPolicy:
+        return cls(
+            cjk_chars_per_second=settings.cjk_chars_per_second,
+            latin_words_per_minute=settings.latin_words_per_minute,
+            min_beat_seconds=settings.min_beat_seconds,
+            max_reading_seconds=settings.max_reading_seconds,
+            beat_end_hold_seconds=settings.beat_end_hold_seconds,
+        )
 
 
 def compile_storyboard(
     storyboard: StoryboardIR,
     *,
+    document: DocumentIR | None = None,
     stage: RenderStage | None = None,
     render_spec: RenderSpec | None = None,
+    timing: BeatTimingPolicy | None = None,
 ) -> AnimationIR:
     """Compile a semantic storyboard; layout remains a deterministic sub-pass."""
 
     spec = render_spec or layout_storyboard(storyboard, stage=stage)
     if spec.storyboard_id != storyboard.storyboard_id:
         raise ValueError("render_spec does not belong to the storyboard being compiled")
-    return compile_render_spec(spec, source_format="storyboard-compiler-v1")
+    return compile_render_spec(
+        spec,
+        document=document,
+        source_format="storyboard-compiler-v1",
+        timing=timing,
+    )
 
 
 def compile_storyboard_render_spec(
     storyboard: StoryboardIR,
     *,
+    document: DocumentIR | None = None,
     stage: RenderStage | None = None,
+    timing: BeatTimingPolicy | None = None,
 ) -> RenderSpec:
     """Return the compatibility RenderSpec carrying canonical AnimationIR."""
 
     spec = layout_storyboard(storyboard, stage=stage)
-    spec.animation_ir = compile_storyboard(storyboard, render_spec=spec)
+    spec.animation_ir = compile_storyboard(
+        storyboard,
+        document=document,
+        render_spec=spec,
+        timing=timing,
+    )
     return spec
 
 
 def compile_render_spec(
     spec: RenderSpec,
     *,
+    document: DocumentIR | None = None,
     source_format: Literal["storyboard-compiler-v1", "render-spec-v1"] = "render-spec-v1",
+    timing: BeatTimingPolicy | None = None,
 ) -> AnimationIR:
     """Adapt a validated RenderSpec without introducing renderer decisions."""
 
     if source_format not in {"storyboard-compiler-v1", "render-spec-v1"}:
         raise ValueError(f"unsupported AnimationIR source format: {source_format}")
+    resolved_timing = timing or BeatTimingPolicy.from_settings(load_animation_settings())
+    fps = 60.0
     return AnimationIR(
+        fps=fps,
         stage=AnimationStage(width=spec.stage.width, height=spec.stage.height),
         metadata=AnimationMetadata(
             storyboardId=spec.storyboard_id,
@@ -80,17 +128,28 @@ def compile_render_spec(
             eyebrow=spec.eyebrow,
             sourceFormat=source_format,
         ),
-        scenes=[_compile_scene(scene, spec.stage) for scene in spec.scenes],
+        citations=_build_citations(spec, document),
+        scenes=[
+            _compile_scene(scene, spec.stage, fps=fps, timing=resolved_timing)
+            for scene in spec.scenes
+        ],
     )
 
 
-def _compile_scene(scene: RenderScene, stage: RenderStage) -> AnimationScene:
+def _compile_scene(
+    scene: RenderScene,
+    stage: RenderStage,
+    *,
+    fps: float,
+    timing: BeatTimingPolicy,
+) -> AnimationScene:
     scene_data = scene.model_dump(mode="json")
     elements = [element.model_dump(mode="json") for element in scene.elements]
     element_by_id = {str(element["id"]): element for element in elements}
     nodes = [_compile_node(element, element_by_id) for element in elements]
     return AnimationScene(
         id=scene.id,
+        mechanism=scene.mechanism,
         metadata=SceneMetadata(
             title=scene.title,
             teachingGoal=scene.teaching_goal,
@@ -101,7 +160,10 @@ def _compile_scene(scene: RenderScene, stage: RenderStage) -> AnimationScene:
         ),
         nodes=nodes,
         camera=AnimationCamera(),
-        beats=[_compile_beat(step, nodes, stage) for step in scene.steps],
+        beats=[
+            _compile_beat(step, nodes, stage, fps=fps, timing=timing)
+            for step in scene.steps
+        ],
         timeline=AnimationTimeline(),
         interactions=[control.model_dump(mode="json") for control in scene.controls],
         legacy=scene_data,
@@ -160,6 +222,9 @@ def _compile_beat(
     step: RenderStep,
     nodes: list[AnimationNode],
     stage: RenderStage,
+    *,
+    fps: float,
+    timing: BeatTimingPolicy,
 ) -> AnimationBeat:
     """Direct one semantic step with a small, deterministic visual grammar.
 
@@ -274,12 +339,117 @@ def _compile_beat(
     if tracks:
         children: list[TimelineItem] = list(tracks)
         timeline.items.append(AnimationGroup(type="parallel", children=children))
+    duration_seconds = max(
+        _timeline_duration(timeline),
+        _reading_duration(step.narration, timing),
+    )
     return AnimationBeat(
         id=step.id,
         title=step.title,
         narration=step.narration,
+        sourceRefs=list(step.source_refs),
+        durationInFrames=max(1, math.ceil(duration_seconds * fps)),
         timeline=timeline,
     )
+
+
+def _reading_duration(text: str, timing: BeatTimingPolicy) -> float:
+    cjk_seconds = len(_CJK.findall(text)) / timing.cjk_chars_per_second
+    latin_seconds = len(_LATIN_WORD.findall(text)) / (timing.latin_words_per_minute / 60)
+    estimated = min(
+        cjk_seconds + latin_seconds + timing.beat_end_hold_seconds,
+        timing.max_reading_seconds,
+    )
+    return max(timing.min_beat_seconds, estimated)
+
+
+def _timeline_duration(timeline: AnimationTimeline) -> float:
+    item_duration = max((_timeline_item_duration(item) for item in timeline.items), default=0.0)
+    effect_duration = max(
+        (effect.delay + effect.duration for effect in timeline.effects),
+        default=0.0,
+    )
+    return max(item_duration, effect_duration)
+
+
+def _timeline_item_duration(item: TimelineItem) -> float:
+    if isinstance(item, AnimationTrack):
+        duration = item.duration if item.duration is not None else item.keyframes[-1].time
+        return item.delay + duration
+    child_durations = [_timeline_item_duration(child) for child in item.children]
+    content = sum(child_durations) if item.type == "sequence" else max(child_durations, default=0.0)
+    return item.delay + content
+
+
+def _build_citations(spec: RenderSpec, document: DocumentIR | None) -> list[AnimationCitation]:
+    if document is None:
+        return []
+    wanted = {
+        ref
+        for scene in spec.scenes
+        for step in scene.steps
+        for ref in step.source_refs
+    }
+    sources = {source.id: source for source in document.sources if source.id}
+    primary = document.source
+    citations: list[AnimationCitation] = []
+    resolved: set[str] = set()
+
+    for section in document.sections:
+        if section.id in wanted:
+            source = (
+                _source_for_block(section.blocks[0].source_id, sources, primary)
+                if section.blocks
+                else primary
+            )
+            citations.append(
+                AnimationCitation(
+                    id=section.id,
+                    title=source.title or document.title,
+                    locator=section.title,
+                    excerpt=_excerpt(" ".join(block.text for block in section.blocks)),
+                    url=source.url,
+                )
+            )
+            resolved.add(section.id)
+        for block in section.blocks:
+            if block.id not in wanted:
+                continue
+            source = _source_for_block(block.source_id, sources, primary)
+            citations.append(
+                AnimationCitation(
+                    id=block.id,
+                    title=source.title or document.title,
+                    locator=section.title,
+                    excerpt=_excerpt(block.text),
+                    url=source.url,
+                )
+            )
+            resolved.add(block.id)
+
+    for ref in sorted(wanted - resolved):
+        citations.append(
+            AnimationCitation(
+                id=ref,
+                title=primary.title or document.title,
+                locator=ref,
+                url=primary.url,
+            )
+        )
+    return citations
+
+
+def _source_for_block(
+    source_id: str | None,
+    sources: dict[str, DocumentSource],
+    primary: DocumentSource,
+) -> DocumentSource:
+    return sources.get(source_id, primary) if source_id else primary
+
+
+def _excerpt(text: str, limit: int = 240) -> str:
+    normalized = _SPACE.sub(" ", text).strip()
+    return normalized if len(normalized) <= limit else f"{normalized[: limit - 1].rstrip()}…"
 
 
 def _track(

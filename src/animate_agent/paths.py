@@ -31,6 +31,7 @@ CONFIG_PATH = _configured_path(
     "ANIMATE_AGENT_CONFIG_PATH",
     PROJECT_ROOT / "config" / "app.example.yaml",
 )
+ENV_FILE = _configured_path("ANIMATE_AGENT_ENV_FILE", PROJECT_ROOT / ".env")
 DATA_DIR = _configured_path("ANIMATE_AGENT_DATA_DIR", PROJECT_ROOT / "data")
 ASSETS_DIR = _configured_path("ANIMATE_AGENT_ASSETS_DIR", PROJECT_ROOT / "assets")
 CACHE_DIR = _configured_path("ANIMATE_AGENT_CACHE_DIR", PROJECT_ROOT / ".cache")

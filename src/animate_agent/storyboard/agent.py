@@ -112,6 +112,10 @@ class StoryboardAgent:
         ]
         last_error = ""
         for attempt in range(1, self._max_retries + 1):
+            if attempt > 1:
+                from animate_agent.animation.progress import report_progress
+
+                report_progress("retry")
             raw = await self._llm.chat(
                 messages, temperature=self._temperature, max_tokens=self._max_tokens
             )

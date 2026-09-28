@@ -10,14 +10,14 @@ import { drawElement } from "./registry.js";
 export function createCanvas2DRenderer(ctx) {
   if (!ctx) throw new Error("Canvas2DRenderer requires a drawing context");
   return {
-    render(sceneState, { stage, view, clear }) {
+    render(sceneState, { stage, view, clear, chrome = true }) {
       if (!sceneState || !Array.isArray(sceneState.nodes)) {
         throw new Error("Canvas2DRenderer requires a resolved Scene State");
       }
       clear();
       ctx.save();
       applyCamera(ctx, sceneState.camera, stage);
-      drawChrome(ctx, sceneState.nodes, view.theme, stage.width, stage.height);
+      if (chrome) drawChrome(ctx, sceneState.nodes, view.theme, stage.width, stage.height);
       for (const node of sceneState.nodes) drawNode(ctx, node, view);
       ctx.restore();
     },

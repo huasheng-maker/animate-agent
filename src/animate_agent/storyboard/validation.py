@@ -17,6 +17,7 @@ from dataclasses import dataclass
 
 from animate_agent.documents.models import DocumentIR
 from animate_agent.knowledge.models import LessonIR
+from animate_agent.mechanisms import required_mechanism
 from animate_agent.rendering.registry import (
     BUTTON_ACTIONS,
     CONSUMABLE_PROPS,
@@ -38,7 +39,7 @@ _PUNCT = re.compile(r"[\s，。、；：！？,.;:!?\"'“”‘’（）()【�
 
 @dataclass(frozen=True, slots=True)
 class StoryboardLimits:
-    """Thresholds the validator enforces, sourced from `agent:` in the YAML."""
+    """Whole-movie thresholds sourced from the YAML configuration."""
 
     min_steps: int = 3
     max_steps: int = 7
@@ -86,6 +87,16 @@ def validate_storyboard(
     """
     issues: list[ValidationIssue] = []
     ref_ids = _document_ref_ids(document) if document is not None else None
+    total_steps = sum(len(scene.steps) for scene in storyboard.scenes)
+    if total_steps < limits.min_steps or total_steps > limits.max_steps:
+        issues.append(
+            ValidationIssue(
+                "step_count_invalid",
+                "scenes",
+                f"整部动画要有 {limits.min_steps}~{limits.max_steps} 个教学节拍，"
+                f"实际 {total_steps} 个",
+            )
+        )
 
     if lesson is not None and len(storyboard.scenes) > len(lesson.scenes):
         issues.append(
@@ -115,19 +126,47 @@ def validate_storyboard(
         _check_preset(scene, where, issues)
         _check_renderer_hint(scene, where, limits, issues)
         _check_ids(scene, where, issues)
-        _check_roles_and_props(
-            scene, where, _acceptable_refs(scene, lesson, ref_ids), issues
-        )
+        acceptable_refs = _acceptable_refs(scene, lesson, ref_ids)
+        if scene.mechanism is not None:
+            carried = {ref for obj in scene.objects for ref in obj.source_refs}
+            for ref in scene.mechanism.source_refs:
+                if ref not in carried or (
+                    acceptable_refs is not None and ref not in acceptable_refs
+                ):
+                    issues.append(ValidationIssue(
+                        "mechanism_evidence", f"{where}.mechanism.source_refs",
+                        f"机制证据 `{ref}` 必须来自本幕对象携带的真实来源",
+                    ))
+        _check_roles_and_props(scene, where, acceptable_refs, issues)
         _check_references(scene, where, issues)
         _check_required_relations(scene, where, issues)
         _check_required_props(scene, where, issues)
-        _check_steps(scene, where, limits, issues)
+        _check_steps(scene, where, acceptable_refs, issues)
         _check_controls(scene, where, issues)
         _check_orphans(scene, where, issues)
 
     if lesson is not None:
         _check_coverage(storyboard, lesson, covered_lesson_ids, issues)
     _check_demo_presence(storyboard, limits, issues)
+
+    focus = storyboard.learning_intent or storyboard.title
+    expected = required_mechanism(focus)
+    matching = [s.mechanism for s in storyboard.scenes
+                if s.mechanism is not None and s.mechanism.kind == expected]
+    if expected and not matching:
+        issues.append(ValidationIssue(
+            "mechanism_required", "scenes",
+            f"问题涉及已支持的计算机制 `{expected}`；至少一幕必须使用对应 mechanism，"
+            "不能仅用通用框线替代。请按能力目录生成并绑定步骤和真实证据。",
+        ))
+    if (
+        expected == "packet_network"
+        and re.search(r"三次握手|tcp\s+handshake", focus, re.I)
+        and not any(p.kind == "packet_network" and p.protocol == "tcp_handshake" for p in matching)
+    ):
+        issues.append(ValidationIssue(
+            "mechanism_protocol", "scenes", "三次握手必须使用 protocol=tcp_handshake",
+        ))
 
     return issues
 
@@ -618,21 +657,33 @@ def _check_required_props(
 def _check_steps(
     scene: StoryboardScene,
     where: str,
-    limits: StoryboardLimits,
+    acceptable_refs: frozenset[str] | None,
     issues: list[ValidationIssue],
 ) -> None:
-    count = len(scene.steps)
-    if count < limits.min_steps or count > limits.max_steps:
-        issues.append(
-            ValidationIssue(
-                "step_count_invalid",
-                f"{where}.steps",
-                f"一个场景要有 {limits.min_steps}~{limits.max_steps} 个教学节拍，实际 {count} 个",
-            )
-        )
+    scene_refs = {ref for claim in scene.claims for ref in claim.source_refs}
+    scene_refs.update(ref for obj in scene.objects for ref in obj.source_refs)
 
     for step_index, step in enumerate(scene.steps):
         step_where = f"{where}.steps[{step_index}]"
+        outside_scene = sorted(set(step.source_refs) - scene_refs)
+        if outside_scene:
+            issues.append(
+                ValidationIssue(
+                    "step_source_ref_outside_scene",
+                    f"{step_where}.source_refs",
+                    f"节拍引用没有绑定到当前场景的事实或对象：{'、'.join(outside_scene)}",
+                )
+            )
+        if acceptable_refs is not None:
+            unknown = sorted(set(step.source_refs) - acceptable_refs)
+            if unknown:
+                issues.append(
+                    ValidationIssue(
+                        "step_source_ref_unknown",
+                        f"{step_where}.source_refs",
+                        f"节拍引用了不存在的来源：{'、'.join(unknown)}",
+                    )
+                )
         for target, states in step.object_states.items():
             role = next((obj.role for obj in scene.objects if obj.id == target), None)
             if role is None:
@@ -817,7 +868,7 @@ def _check_demo_presence(
             ValidationIssue("no_visual_objects", "scenes", "整个 storyboard 没有任何可视化对象")
         )
     if limits.require_interactive_demo and not any(
-        scene.controls for scene in storyboard.scenes
+        scene.controls or scene.mechanism is not None for scene in storyboard.scenes
     ):
         issues.append(
             ValidationIssue(

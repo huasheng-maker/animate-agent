@@ -17,7 +17,7 @@
           "role": "vehicle",
           "label": "小车",
           "props": { "speed": 1.0, "heading": 0, "glyph": "car" },
-          "source_refs": []
+          "source_refs": ["robot-source"]
         },
         {
           "id": "lidar",
@@ -55,7 +55,8 @@
           "description": "雷达向前方扇形区域发射多条测距射线。",
           "highlights": ["lidar"],
           "object_states": { "lidar": { "enabled": true } },
-          "key_points": ["雷达测距", "扇形扫描"]
+          "key_points": ["雷达测距", "扇形扫描"],
+          "source_refs": ["robot-source"]
         },
         {
           "id": "detect",
@@ -63,7 +64,8 @@
           "description": "最近回波被标记为危险候选点。",
           "highlights": ["lidar", "obstacle-a"],
           "object_states": { "obstacle-a": { "danger": true } },
-          "key_points": ["最近回波", "危险候选点"]
+          "key_points": ["最近回波", "危险候选点"],
+          "source_refs": ["robot-source"]
         },
         {
           "id": "decide",
@@ -71,7 +73,8 @@
           "description": "最近距离低于安全距离时，控制器进入避障状态。",
           "highlights": ["car", "obstacle-a"],
           "object_states": { "car": { "danger": true } },
-          "key_points": ["安全距离", "避障状态"]
+          "key_points": ["安全距离", "避障状态"],
+          "source_refs": ["robot-source"]
         },
         {
           "id": "avoid",
@@ -79,7 +82,8 @@
           "description": "控制器比较左右空旷程度，选择更安全的一侧。",
           "highlights": ["car", "obstacle-a", "obstacle-b"],
           "object_states": { "car": { "heading": -30, "danger": false } },
-          "key_points": ["左右空旷度", "选择转向"]
+          "key_points": ["左右空旷度", "选择转向"],
+          "source_refs": ["robot-source"]
         }
       ],
       "controls": [

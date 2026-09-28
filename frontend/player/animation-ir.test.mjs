@@ -60,7 +60,9 @@ test("RenderSpec v1 normalizes without losing compatibility data", () => {
   assert.deepEqual(ir.scenes[0].nodes[0].transform.position, { x: 100, y: 120 });
   assert.deepEqual(ir.scenes[0].legacy.steps, source.scenes[0].steps);
   assert.deepEqual(ir.scenes[0].interactions, source.scenes[0].controls);
-  assert.deepEqual(ir.scenes[0].beats, []);
+  assert.equal(ir.scenes[0].beats.length, 1);
+  assert.equal(ir.scenes[0].beats[0].id, "step-1");
+  assert.equal(ir.scenes[0].beats[0].durationInFrames, 180);
   assert.equal(ir.scenes[0].nodes[0].parentId, null);
   assert.equal(ir.scenes[0].metadata.learningQuestion, "Which hop handles the request?");
   assert.equal(ir.scenes[0].metadata.visualPattern, "flow");

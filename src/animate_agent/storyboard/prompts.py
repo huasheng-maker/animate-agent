@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
 from animate_agent.knowledge.models import LessonIR
+from animate_agent.mechanisms import mechanism_prompt
 from animate_agent.rendering.registry import render_vocabulary
 from animate_agent.storyboard.models import (
     StoryboardClaim,
@@ -141,7 +142,8 @@ JSON 结构如下（不要输出 JSON 以外的任何文字）：
           "description": "这一幕画面上发生什么，写成一句完整的话",
           "highlights": ["car"],
           "object_states": { "car": { "speed": 40 } },
-          "key_points": ["关键词1", "关键词2"]
+          "key_points": ["关键词1", "关键词2"],
+          "source_refs": ["section-2-block-1"]
         }
       ],
       "controls": [
@@ -170,7 +172,7 @@ JSON 结构如下（不要输出 JSON 以外的任何文字）：
 - **场景覆盖**：`lesson_scene_ids` 必须覆盖 LessonIR 里的**每一个**场景 id，
   不多不少。一个 storyboard 场景可以覆盖 1~2 个课程场景（内容单薄的相邻场景合并成一幕），
   但**不允许新增**课程里没有的场景。
-- **节拍数量**：每个场景写 3~7 个 `steps`。
+- **节拍数量**：整部动画合计写 3~7 个 `steps`；每个场景至少一个。
 - **视觉推理**：每幕填写 `learning_question`、`visual_pattern` 和至少一个 `claims`。
   根据 KnowledgeIR 中的过程、状态、因果、比较、空间或时间关系选视觉模式，
   不要把所有主题都降级成同一种卡片/流程模板。
@@ -178,6 +180,8 @@ JSON 结构如下（不要输出 JSON 以外的任何文字）：
   `source_refs` 必须直接复制对应语义项或课程场景的来源 id。
 - **每个节拍必须有视觉变化**：至少写一个 `highlights`，或至少改一个 `object_states`。
   只讲文字、画面上什么都没动的节拍不是节拍。
+- **每个节拍必须有出处**：`source_refs` 至少一个，只能引用当前场景的 claim 或对象已经
+  携带的真实来源 id。
 - **关键词覆盖**：每个场景各节拍的 `key_points` 合起来，必须**逐字**包含它所覆盖的
   那些课程场景的**全部** `key_points`。请直接照抄，不要改写、不要合并近义词。
 - **出处覆盖**：每个场景各对象的 `source_refs` 合起来，必须覆盖它所覆盖的课程场景的
@@ -200,7 +204,9 @@ JSON 结构如下（不要输出 JSON 以外的任何文字）：
 """
 
 # The constraint block is appended rather than retyped: see `render_field_constraints`.
-STORYBOARD_SYSTEM_PROMPT = STORYBOARD_SYSTEM_PROMPT + "\n" + render_field_constraints() + "\n"
+STORYBOARD_SYSTEM_PROMPT = (
+    STORYBOARD_SYSTEM_PROMPT + "\n" + render_field_constraints() + mechanism_prompt() + "\n"
+)
 
 
 def build_storyboard_prompt(lesson: LessonIR, *, allowed_renderers: tuple[str, ...] = ()) -> str:

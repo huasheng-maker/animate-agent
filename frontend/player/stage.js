@@ -67,6 +67,24 @@ export function createStage(canvas, stage) {
   };
 }
 
+/** A Remotion composition already owns its logical width and height. */
+export function createCompositionStage(canvas, stage) {
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.max(1, Math.round(stage.width * dpr));
+  canvas.height = Math.max(1, Math.round(stage.height * dpr));
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return {
+    ctx,
+    clear() {
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, stage.width, stage.height);
+      ctx.restore();
+    },
+  };
+}
+
 /** Read the theme once, from the CSS custom properties the stylesheet owns. */
 export function readTheme(element) {
   const styles = getComputedStyle(element);

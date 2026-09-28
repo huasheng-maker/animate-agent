@@ -286,7 +286,7 @@ def test_kimi_web_search_adapter_uses_official_search_pro_api(
         assert request.headers["x-msh-track-id"]
         assert body == {
             "text_query": "Pydantic validation",
-            "limit": 5,
+            "limit": 3,
             "timeout_seconds": 30,
         }
         return httpx.Response(

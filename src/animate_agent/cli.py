@@ -27,11 +27,11 @@ from animate_agent.documents.service import ingest_file
 from animate_agent.knowledge.models import LessonIR
 from animate_agent.knowledge.service import generate_lesson
 from animate_agent.llm import LLMBudgetExhaustedError, load_llm_config
+from animate_agent.paths import STORYBOARD_SAMPLES_DIR
 from animate_agent.rendering.layout import LayoutError
 from animate_agent.rendering.legacy import FROZEN_TEMPLATES, scene_to_render_spec
 from animate_agent.storyboard.models import StoryboardIR
 from animate_agent.storyboard.service import DEFAULT_GENERATED_DIR, generate_storyboard
-from animate_agent.paths import STORYBOARD_SAMPLES_DIR
 
 EXIT_OK = 0
 EXIT_GENERATION_FAILED = 1
@@ -177,7 +177,7 @@ async def _run(args: argparse.Namespace) -> int:
         return EXIT_OK
 
     try:
-        spec = compile_storyboard_render_spec(storyboard)
+        spec = compile_storyboard_render_spec(storyboard, document=document)
     except LayoutError as exc:
         # The storyboard is already on disk and is the only way to find out why
         # the layout refused. Say so rather than leaving a bare traceback.
