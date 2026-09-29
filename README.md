@@ -1,477 +1,168 @@
-# Animate Agent（Intuition Engine Agent）
+# Animate Agent
 
-Animate Agent 是一个把技术文档、网页、文本和教学资料转换为可交互教学内容的原型项目。它的目标不是生成普通摘要页，而是逐步构建 **Interactive Knowledge Movie（交互式知识影片）**：用受控的数据结构描述知识、镜头、视觉对象和交互，再由前端渲染器播放。
+把一个问题变成可观察、可操作的解释动画：看质点怎样运动、矩阵怎样参与计算、生成的 token 怎样进入下一步。
 
-本阶段教学验证：启动前端后打开 [`/demos/lidar`](http://localhost:3000/demos/lidar)，体验“激光测距 → 安全膨胀 → A* 搜索 → 绕障行驶”。这是无需模型调用的手工教学 Demo，支持移动货架、窄门/封路、机器人半径与量程等交互；复用现有 Remotion、AnimationIR Runtime 和 Canvas 渲染器。[实现核查、Visual Plan 设计与验证报告](docs/lidar-demo-report.md)。
+项目使用模型规划受控计算图，再由本地计算库和渲染器执行。浏览器不会执行模型生成的 JavaScript、Python 或 HTML。
 
-小艺云插件接入的接口、观看页和控制台配置步骤见 [小艺接入指南](docs/xiaoyi-integration.md)。
+## 先体验三个示例（无需密钥、无需启动后端）
 
-当前仓库仍处于原型阶段，已经具备：
+需要 Node.js 22 或 24、npm、Git。
 
-- 可直接打开的静态首页与机器人避障交互 Demo；
-- Web Search / 单页 Web Reader / Text / File → `SourceDocument[]` → `DocumentIR` 的统一边界；
-- Query 意图 + 检索证据 → `StoryboardIR` 的单次生成链路，以及文档模式的 `LessonIR` 兼容链路；
-- FastAPI URL 文档、课程与动画接口，以及对应的 Next.js 同源代理；
-- 可直接接收接口 `RenderSpec` 的 Canvas 播放器。
-
-> Query 动画在受控 Web Search 之后用一次成功的生成调用直接产出有证据的 `StoryboardIR`；URL/File 仍保留 `LessonIR → StoryboardIR` 兼容路径。完整 HTML 不会直接进入模型，播放器也不会执行模型生成代码。
-
-当前工作分支 `baseline/pre-refactor` 用于保留大规模重构前的真实实现。这里的“baseline”只有在相关源码、配置、测试和文档被审核并提交后才是可恢复快照；仅创建分支不会保存未提交工作区。
-
-## 1. 当前架构
-
-当前 URL 主路径为：
-
-```text
-静态视觉原型
-frontend/demo/index.html → intuition-home.js → Canvas 交互演示
-
-Query → Gemini/OpenAI/Kimi Search   ┐
-URL   → local/Kimi Web Reader       ├→ SourceDocument[] → DocumentIRBuilder → DocumentIR
-Text  → TextAdapter                 │
-File  → FileAdapter                 ┘
-
-SourceDocument/DocumentIR 保留 heading、code、equation、table、image、diagram、list、quote、
-callout、assets 与逐块 provenance；Knowledge Agent 再提取实体、概念、关系、过程、状态、
-示例、公式和比较，避免在进入动画规划前压缩成低信息密度摘要。
-
-Query: 用户问题 → VisualizationIntent + EvidencePack
-    → IntentStoryboardAgent → StoryboardIR（一次成功生成调用）
-
-URL/File/Text: DocumentIR → KnowledgeAgent → LessonIR
-    → StoryboardAgent → StoryboardIR（兼容路径）
-
-StoryboardIR
-    → 本地 Compiler（确定性 layout）→ AnimationIR
-    → Animation Runtime → Scene State → Canvas2DRenderer
-
-RenderSpec v1 作为兼容载荷继续返回，并内嵌同一次编译产生的 AnimationIR；
-旧播放器可继续读取 RenderSpec，新播放器优先校验并使用 AnimationIR。
-```
-
-当前 Next.js 首页暴露 URL、Query，以及仓库内白名单化的 Kubernetes Controller 固定文档示例。
-该示例通过 `POST /api/animations/from-example` 走完整 File → SourceDocument → RenderSpec 链路，
-并另提供明确标注的确定性“即时预览”用于无 LLM 的视觉验收。任意文件上传仍只接到 FastAPI 的
-`POST /api/lessons/from-file`，Text/File 尚未接入通用网页端完整动画流程。Query 搜索结果是带引用的
-provider synthesis；当前不会再逐个抓取所有引用页面。默认 URL Reader 是受 SSRF、重定向、大小和
-内容类型限制的静态 HTTP 单页读取器，Crawl4AI 只作为显式 optional adapter 存在。
-
-核心边界应保持为：
-
-```text
-URL / File → 确定性 Parser / Adapter → 经过校验的 IR → AI 规划 → 受控动画 Spec → Renderer
-```
-
-网页完整 HTML 和网页中的指令都应视为不可信数据，不应直接交给模型执行；前端也不应执行模型任意生成的代码。
-
-## 2. 快速开始
-
-### 2.1 环境要求
-
-- Python 3.11 或更高版本；
-- 与 Next.js 15 兼容的 Node.js 环境（运行查看器时需要）；
-- 推荐使用 [uv](https://docs.astral.sh/uv/) 管理 Python 依赖；也可以使用传统 `venv + pip`。
-
-### 2.2 安装 Python 依赖
-
-推荐方式：
-
-```powershell
-uv sync --extra dev
-```
-
-默认 URL 主链路不需要浏览器。如需显式使用 optional Crawl4AI adapter：
-
-```powershell
-uv sync --extra dev --extra crawl4ai
-uv run crawl4ai-setup
-```
-
-如果上一步没有成功安装 Chromium：
-
-```powershell
-uv run python -m playwright install chromium
-```
-
-不使用 uv 时：
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements-dev.txt
-python -m pip install -e .
-```
-
-### 2.3 方式一：查看静态交互 Demo
-
-直接用浏览器打开：
-
-```text
-frontend/demo/index.html
-```
-
-也可以启动一个静态文件服务器，避免浏览器对本地文件的限制：
-
-```powershell
-python -m http.server 4173 --directory frontend/demo
-```
-
-然后访问 `http://127.0.0.1:4173`。页面可以填写文本、选择示例、导入本地文件，并体验机器人避障的 Canvas 动画与参数控件。当前“生成”过程是前端原型逻辑，不会调用后端或 AI。
-
-### 2.4 方式二：运行 URL 文档/动画 API 与查看器
-
-先启动 FastAPI：
-
-```powershell
-uv run uvicorn animate_agent.api:app --reload
-```
-
-默认 URL 主路径不启动 Playwright，因此不依赖浏览器事件循环。只有显式使用 optional
-Crawl4AI adapter 时才会进入浏览器采集路径；生产运行仍建议去掉 `--reload`，并为浏览器采集配置
-容器隔离和出口网络控制。
-
-或使用虚拟环境：
-
-```powershell
-.\.venv\Scripts\python.exe -m uvicorn animate_agent.api:app --reload
-```
-
-API 默认地址为 `http://127.0.0.1:8000`，交互式接口文档位于 `http://127.0.0.1:8000/docs`。
-只运行前端而没有启动这个 API 时，页面无法连接 `localhost:8000`，浏览器会显示连接后端的提示。
-
-另开一个 PowerShell 窗口安装并启动前端：
-
-```powershell
-npm --prefix frontend install
+```bash
+git clone https://github.com/huasheng-maker/animate-agent.git
+cd animate-agent
+npm --prefix frontend ci
 npm --prefix frontend run dev
 ```
 
-打开 `http://localhost:3000`，可以直接运行 `data/samples/controller.md` 的 Controller 控制循环示例，
-也可以输入公开网页 URL 后选择 `Inspect DocumentIR` 检查结构，或选择“生成动画”运行完整编排并进入播放器。
-播放器使用 AnimationIR 的 `fps` 和整数帧作为规范时间坐标，支持播放/暂停、逐帧前后移动、
-按教学节拍切换、重置与 0.25×/0.5×/1×/2× 倍速；RAF 只负责调度绘制。浏览器先请求同源的
-Next.js API 路由，再由 Next.js 访问 FastAPI，因此即使 Next.js 自动切换端口，也不会产生浏览器跨域问题。文档与动画结果分别保存到：
+打开 **http://localhost:3000/demos**：
 
-```text
-data/documents/{document_id}.json
-data/runs/{run_id}/
-  01-source-document.json
-  02-document-ir.json
-  03-lesson-ir.json
-  04-storyboard-ir.json
-  05-animation-ir.json
-  06-render-spec.json
+| 示例 | 可以观察和改变什么 | 来源 |
+| --- | --- | --- |
+| 雷达避障实验 | 激光回波、安全膨胀、A* 路径；改变货架位置、机器人半径、量程 | 确定性教学实验，使用实际几何与路径计算 |
+| 匀速圆周运动 | 切向速度、向心加速度；改变半径和角速度 | 真实模型生成后审核的计算图 |
+| LLM 工作原理 | token、嵌入向量、概率与逐步生成 | 真实模型生成后审核的教学示例 |
+
+演示文件随仓库提供，不会因为打开或拖动滑杆而调用付费 API。示例数值是教学模型，不能视为真实训练参数或设备测量值。雷达实验的已知地图模式与单帧传感模式有不同的信息边界，界面会明确显示。
+
+LLM 示例实际计算嵌入查表、softmax、贪心选择与三轮反馈；反馈部分是仅依赖上一个 token 的简化模型，不包含完整 Attention、FFN 或 KV cache。生成任务 ID 和审核改动见 [示例来源记录](frontend/public/demos/provenance.json)。审核修正了输入绑定与简化边界文案；它不是未经审核的模型原始回复，也不保证每次自动生成都达到相同质量。
+
+想生成自己的动画，继续下面的配置。
+
+## 运行完整生成流程
+
+需要 Python 3.11 或 3.12，以及 [uv](https://docs.astral.sh/uv/)。开发验证使用 Python 3.12 和 Node.js 24。
+
+在项目根目录安装后端依赖：
+
+```bash
+uv sync --frozen --extra dev
 ```
 
-`01-source-document.json` 始终是数组，因为一次 Web Search 可能产生多个来源。Query 动画保留
-intent 直达 StoryboardIR 的一次生成调用，因此对应的 `03-lesson-ir.json` 是显式
-`status: "skipped"` 阶段记录；其他路径保存完整 LessonIR。失败运行保留已经完成的阶段文件，便于定位。
-
-动画接口可能包含多次、耗时数分钟的模型调用。Next.js 动画代理使用独立的长请求客户端，默认等待
-30 分钟，可用 `BACKEND_ANIMATION_TIMEOUT_MS` 调整。如果浏览器或代理中途断开，已经通过校验的
-LessonIR、被拒绝的 Storyboard 原文/错误和最终 RenderSpec 仍会按阶段落盘；首页的
-“查看最近生成结果”可以恢复该固定示例最后一次成功持久化的 RenderSpec。
-
-也可以直接调用接口：
+创建本地配置。PowerShell：
 
 ```powershell
-$body = @{ url = "https://raw.githubusercontent.com/ManimCommunity/manim/main/docs/source/tutorials/quickstart.rst" } | ConvertTo-Json
-Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/api/documents/from-url" -ContentType "application/json" -Body $body
-
-# 需要在 .env 中配置 KIMI_KEY 或 DEEPSEEK_KEY
-Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/api/animations/from-url" -ContentType "application/json" -Body $body
+Copy-Item .env.example .env
 ```
 
-动画生成期间，启动 FastAPI 的终端会按阶段打印进度和耗时，例如：
+macOS / Linux：
 
-```text
-animation run=8f3a1c42d7b0 stage=source_ingestion status=completed elapsed_ms=42 document_id=... sections=6
-animation run=8f3a1c42d7b0 stage=lesson_generation status=started document_id=...
-llm run=8f3a1c42d7b0 status=started model=kimi-k2.6 timeout_seconds=600 messages=2 max_tokens=32768
-llm run=8f3a1c42d7b0 status=waiting elapsed_seconds=30
+```bash
+cp .env.example .env
 ```
 
-模型请求等待期间每 30 秒打印一次 `status=waiting` 心跳；默认单次模型请求超时为 600 秒，可通过
-`LLM_TIMEOUT_SECONDS` 调整。如果心跳停止且没有 completed/failed，应再检查后端进程是否仍在运行。
-如果发生异常，日志会给出当时的 `stage`、异常类型和 traceback，但不会打印文档正文、prompt、
-Authorization 或 API key。
+只在本机编辑 `.env`。下面是使用一把 Kimi 密钥的最小配置：
 
-如后端不在默认地址运行，可在启动 Next.js 前设置服务端代理地址：
+```dotenv
+KIMI_KEY=填写自己的密钥
+KIMI_MODEL=kimi-k2.6
+WEB_SEARCH_PROVIDER=kimi
+KIMI_WEB_SEARCH_MODE=pro
+WEB_READER_PROVIDER=local
+```
 
-```powershell
-$env:BACKEND_API_BASE_URL = "http://127.0.0.1:8000"
+真实生成会产生所选服务商的费用。正文读取选择 `local` 时使用项目自带的受控 HTTP 读取器，不需要额外模型密钥。
+
+终端一，在项目根目录启动后端：
+
+```bash
+uv run python -m uvicorn animate_agent.api:app --reload --host 127.0.0.1 --port 8000
+```
+
+终端二，启动前端：
+
+```bash
+npm --prefix frontend ci
 npm --prefix frontend run dev
 ```
 
-只有在明确需要浏览器直接跨域请求 FastAPI 时，才设置公开变量 `NEXT_PUBLIC_API_BASE_URL`。
+打开 **http://localhost:3000**，选择 Query，输入普通问题，然后点击 CREATE。也可以选择 URL 或上传受支持的文档。
 
-后端路径默认从已安装源码推导，不依赖启动命令的当前目录。部署时可以用
-`ANIMATE_AGENT_PROJECT_ROOT`、`ANIMATE_AGENT_CONFIG_PATH`、`ANIMATE_AGENT_ENV_FILE`、
-`ANIMATE_AGENT_DATA_DIR`、`ANIMATE_AGENT_ASSETS_DIR` 和 `ANIMATE_AGENT_CACHE_DIR`
-分别覆盖项目根、配置、环境文件、数据、资源与缓存目录；相对覆盖值以项目根为基准解析。
+- 后端健康检查：http://127.0.0.1:8000/health
+- API 文档：http://127.0.0.1:8000/docs
+- 后端默认端口为 8000；前端默认端口为 3000。
+- 更改 `.env` 后重启后端。终端已有环境变量优先于 `.env`；`--reload` 不保证重新加载配置文件。
+- 修改前端到后端的地址时，设置 `BACKEND_API_BASE_URL`，然后重启前端。
 
-### 2.5 方式三：在 Python 中生成动画 Scene Spec
+无需为了本地生成安装 Crawl4AI、Playwright 浏览器或 Docker。Crawl4AI 是可选采集适配器，不在默认网页读取路径中。
 
-现有模板会生成受控、可序列化的场景数据，并不会直接渲染动画：
+## 模型与搜索分别如何选择
 
-```python
-import json
+| 环节 | 当前选择规则 | 配置 |
+| --- | --- | --- |
+| 内容规划、分镜生成 | 有 `KIMI_KEY` 时用 Kimi；否则使用 DeepSeek | `KIMI_MODEL` / `DEEPSEEK_MODEL` |
+| 问题检索 | 显式选择 Gemini、Kimi 或 OpenAI | `WEB_SEARCH_PROVIDER` |
+| 正文读取 | 本地 HTTP 或 Kimi Reader | `WEB_READER_PROVIDER` |
 
-from animate_agent.animation.templates import build_robot_obstacle_avoidance_scene
+使用 Gemini 搜索：
 
-scene = build_robot_obstacle_avoidance_scene()
-print(json.dumps(scene.to_spec(), ensure_ascii=False, indent=2))
+```dotenv
+WEB_SEARCH_PROVIDER=gemini
+GEMINI_API_KEY=填写自己的密钥
+GEMINI_WEB_SEARCH_MODEL=gemini-2.5-flash
 ```
 
-运行示例：
+这会将**搜索**切换为 Gemini。仍需配置 Kimi 或 DeepSeek 用于分镜生成；只填写 Gemini 密钥不会自动切换生成模型。不要把密钥值粘贴到日志、截图或 GitHub。
 
-```powershell
-uv run python your_script.py
-```
+搜索保留最多三个强相关来源，优先读取两篇正文，并按输入、过程、输出、示例检查材料深度。缺少关键环节时最多补查一次。检查是启发式规则，不代表材料已经完成事实核验。网页正文先经过清洗，不会把完整 HTML 当成模型指令。
 
-也可以使用 `build_ros_pub_sub_scene()` 生成 ROS Publisher / Topic / Subscriber 教学场景。
-
-### 2.6 方式四：显式使用 optional Crawl4AI Adapter
-
-默认 URL 入口使用轻量单页 Web Reader。只有动态网页、未来整站文档或多页任务才显式选择 Crawl4AI：
-
-```python
-import asyncio
-
-from animate_agent.sources.crawl4ai import Crawl4AIAdapter
-from animate_agent.sources.models import UrlSourceInput
-
-
-async def main() -> None:
-    async with Crawl4AIAdapter() as adapter:
-        documents = await adapter.resolve(UrlSourceInput(url="https://docs.example.com/guide"))
-        print(documents[0].title)
-        print(documents[0].content)
-
-
-asyncio.run(main())
-```
-
-统一来源架构见 [`docs/source-ingestion.md`](docs/source-ingestion.md)；Crawl4AI 专项策略见 [`docs/web-ingestion-crawl4ai.md`](docs/web-ingestion-crawl4ai.md)。
-
-## 3. 目录与文件说明
-
-下面列出仓库中的源码、配置、测试和主要文档。运行时生成的 `.venv/`、`node_modules/`、`.next/`、缓存和 `data/documents/*.json` 不属于源码，因此不逐项列出。
-
-### 3.1 根目录
-
-| 文件 | 功能 | 常见修改场景 |
-| --- | --- | --- |
-| `README.md` | 项目总览、安装、运行、文件职责和扩展指南。 | 入口、依赖、目录或运行方式变化时同步更新。 |
-| `pyproject.toml` | Python 包元数据、运行依赖、dev 依赖以及 pytest、Ruff、mypy 配置。 | 新增依赖、调整 Python 版本或质量规则。 |
-| `uv.lock` | uv 锁定的完整依赖版本，用于可复现安装。 | 修改依赖后通过 uv 重新生成，不建议手工编辑。 |
-| `requirements.txt` | pip 方式使用的运行依赖。 | 新增生产依赖时与 `pyproject.toml` 保持同步。 |
-| `requirements-dev.txt` | pip 方式使用的开发、测试和静态检查依赖。 | 新增开发工具时更新。 |
-| `.env.example` | LLM、Web Search、Web Reader 和本地服务环境变量示例。 | 增加配置项时只写空值或非敏感默认值，不写真实密钥。 |
-| `.gitignore` | 排除虚拟环境、依赖、缓存、构建结果和生成数据。 | 出现新的本地产物时补充精确规则。 |
-| `AGENTS.md` | 仓库内自动化 Agent 的工作与安全协议，不是业务代码。 | 仅在明确维护 Agent 协议时修改。 |
-
-### 3.2 配置与样例数据
-
-| 文件 | 功能 | 常见修改场景 |
-| --- | --- | --- |
-| `config/app.example.yaml` | 应用、路径、渲染器和 Agent 约束示例；当前代码实际加载 `knowledge`、`storyboard` 和 `animation`，但不读取 `app`、`paths`、`llm`。 | 调整 Agent 约束时同步校验代码；未接入的区段不能当作运行时事实。 |
-| `data/samples/robot_obstacle_avoidance.md` | 机器人避障教学内容样例。 | 测试新的解析、分镜或模板生成流程。 |
-| `data/samples/ros_pub_sub.md` | ROS 发布/订阅教学内容样例。 | 验证 ROS 知识对象和场景模板。 |
-| `data/documents/*.json` | URL 解析接口生成的 `DocumentIR` 文件。默认被 Git 忽略。 | 调试解析结果；不应当作手写源码维护。 |
-
-### 3.3 Python 包：`src/animate_agent/`
-
-| 文件 | 功能 | 适合扩展的位置 |
-| --- | --- | --- |
-| `__init__.py` | Python 包入口和当前版本号。 | 发布新版本时更新版本策略。 |
-| `api.py` | 提供 URL/Query 文档与动画、URL 课程和文件课程 API，并将采集异常映射为 HTTP 状态。 | 添加健康检查、生命周期管理或统一错误响应。 |
-| `documents/models.py` | 定义严格校验的 `DocumentSource`、`DocumentBlock`、`Section` 和 `DocumentIR`。 | 增加跨来源都稳定的语义字段；变更时同步 API、前端和测试。 |
-| `documents/builder.py` | 只消费 `SourceDocument[]`，确定性构建带 provenance 的 `DocumentIR`。 | 扩展统一内容格式映射；不得加入 HTTP、搜索或供应商 SDK。 |
-| `documents/fetcher.py` | 早期 legacy httpx 下载器；当前 URL API 不再使用。 | 仅用于兼容或离线实验，不应绕过统一安全入口。 |
-| `documents/parser.py` | 确定性清洗 HTML，优先 `main/article/[role=main]`，提取标题、章节、段落、代码、列表和图片。 | 增加表格、引用等 block 类型，或针对站点完善噪声选择器。 |
-| `documents/normalized.py` | 兼容性桥接：将旧采集边界 `NormalizedDocument` 转为 `DocumentIR`；不在默认 URL 主路径。 | 在明确保留旧边界时维护，不应导入 Crawl4AI 私有类型。 |
-| `documents/service.py` | 串联安全采集、转换、校验和 DocumentIR 持久化。 | 改存储后端、增加去重/缓存，或接入新解析适配器。 |
-| `documents/__init__.py` | 导出常用 DocumentIR 类型和 `parse_html()`。 | 新增稳定公共 API 时更新。 |
-| `animation/elements.py` | 旧手写 Scene 数据结构，仅供模板基线和 CLI 兼容路径使用。 | 不应作为新的 LLM 生成链路扩展点。 |
-| `animation/templates.py` | 旧机器人避障和 ROS 手写模板，通过 `rendering/legacy.py` 转为当前 `RenderSpec`。 | 仅维护基线对照；新能力优先进入 Storyboard/RenderSpec。 |
-| `animation/service.py` | 编排 URL → lesson → storyboard → layout，并持久化 `RenderSpec`。 | 增加任务队列、结果状态或存储后端。 |
-| `animation/__init__.py` | 汇总导出动画公共类型。 | 新元素成为公共 API 时更新。 |
-| `interaction/controls.py` | 定义 slider、toggle、button 和拖拽目标等交互 Spec。 | 新增选择器、输入框、时间线控制等控件。 |
-| `interaction/__init__.py` | 交互子包入口。 | 需要公开稳定交互 API 时补充导出。 |
-| `rendering/layout.py` / `rendering/models.py` | 将语义 Storyboard 确定性布局为严格 `RenderSpec`。 | 增加受控图元、预设与布局规则。 |
-| `storyboard/` | 定义、生成并校验 `StoryboardIR`。 | 扩展语义角色、规则和模型提示。 |
-
-### 3.4 来源解析与可选采集基础设施
-
-`src/animate_agent/sources/` 是默认业务边界：`models.py` 定义 `SourceDocument` / `SourceInput`，`resolver.py` 做 query/url/text/file 确定性路由，`adapters.py` 实现 hosted Web Search、单页 Reader、Text 与 File adapter，`crawl4ai.py` 提供显式 optional adapter。
-
-`src/animate_agent/ingestion/` 保留 URL 安全策略、静态 HTTP reader 基础设施和 Crawl4AI 兼容层：
-
-| 文件 | 功能 | 适合扩展的位置 |
-| --- | --- | --- |
-| `models.py` | 定义旧 URL/原始 HTML 采集输入、`WebIngestionConfig` 和 `NormalizedDocument`。 | 主要服务 Crawl4AI 兼容层；默认业务来源模型位于 `sources/models.py`。 |
-| `base.py` | 定义旧 `NormalizedDocument` 采集协议。 | 仅在继续维护该兼容边界时扩展。 |
-| `router.py` | 旧采集路由器；当前 API 和 `SourceResolver` 没有调用它。 | 不应与 `sources/resolver.py` 同时扩展，需先决定是否保留。 |
-| `security.py` | 校验 URL、DNS、域名白名单和浏览器子请求，阻止私网、localhost 与元数据地址。 | 根据部署网络增加策略；生产环境仍应配合容器和出口防火墙。 |
-| `exceptions.py` | 定义稳定、可安全展示的采集错误类型。 | 新失败类别应保持用户信息与开发诊断分离。 |
-| `web/contracts.py` | 定义应用自有的 Crawl 快照 DTO 和 Invoker 协议。 | 适配其他浏览器采集器时复用或实现等价边界。 |
-| `web/crawl4ai_adapter.py` | 唯一直接接触 Crawl4AI API 的兼容层，并管理浏览器生命周期。 | Crawl4AI 升级时优先只检查和修改此文件。 |
-| `web/normalizer.py` | 将采集快照纯转换为章节、代码、表格、图片、链接等规范结构。 | 改进无副作用的内容归一化规则。 |
-| `web/__init__.py` | 对外导出 `Crawl4AIWebDocumentAdapter`。 | Web 采集公共 API 变化时更新。 |
-| `ingestion/__init__.py` | 汇总导出路由器、输入、配置和标准输出模型。 | 新类型成为稳定入口时更新。 |
-
-### 3.5 前端
-
-| 文件 | 功能 | 常见修改场景 |
-| --- | --- | --- |
-| `frontend/package.json` | Next.js 项目依赖与 `dev/build/start/typecheck` 命令。 | 添加 UI 依赖或脚本。 |
-| `frontend/package-lock.json` | npm 的精确依赖锁。 | `npm install` 后自动更新，不建议手工编辑。 |
-| `frontend/tsconfig.json` | TypeScript 编译配置。 | 调整严格度、路径别名或编译目标。 |
-| `frontend/next-env.d.ts` | Next.js 自动生成的类型声明入口。 | 通常不手工编辑。 |
-| `frontend/app/layout.tsx` | App Router 根布局与页面 metadata。 | 修改全局语言、标题、图标或全局 Provider。 |
-| `frontend/app/page.tsx` | URL/Query 输入、DocumentIR 查看器、动画生成入口及 `sessionStorage` 播放器交接。 | 拆分组件、增加 block 类型、进度和错误状态。 |
-| `frontend/app/api/documents/from-url/route.ts` | 同源 API 代理，把浏览器请求转发给本地 FastAPI，避免浏览器 CORS 和 loopback 限制。 | 后端地址变化时设置 `BACKEND_API_BASE_URL`，或在这里增加超时与统一错误格式。 |
-| `frontend/app/api/animations/from-url/route.ts` | 动画生成接口的同源代理。 | 接入异步任务状态或统一超时策略。 |
-| `frontend/app/player/route.ts` | 将 `/player?spec=...` 保持同源地转到播放器运行时。 | 增加可分享的持久化结果 URL。 |
-| `frontend/app/player-runtime/[asset]/route.ts` | 通过白名单复用现有播放器静态资源。 | 播放器拆包或部署目录改变时更新白名单。 |
-| `frontend/app/globals.css` | Next.js 查看器的全局样式与响应式布局。 | 修改查看器视觉系统和移动端适配。 |
-| `frontend/app/icon.svg` | Next.js 页面图标。 | 更换品牌图标。 |
-| `frontend/demo/index.html` | 静态首页结构、输入区、结果区和机器人 Canvas。 | 调整原型信息架构或新增静态 Demo 面板。 |
-| `frontend/demo/intuition-home.js` | 当前静态首页的输入、文件读取、示例切换、生成状态和 Canvas 动画逻辑。 | 修改原型交互、绘制算法或接入受控后端接口。 |
-| `frontend/demo/intuition-home.css` | 当前首页特有的视觉样式。 | 修改品牌、输入区、结果布局和动画效果。 |
-| `frontend/demo/styles.css` | 静态 Demo 的基础样式与旧课件样式，当前 `index.html` 仍会加载。 | 修改共享布局时注意不要破坏旧样式。 |
-| `frontend/demo/app.js` | 早期 ROS/机器人互动课件逻辑；当前 `index.html` 没有加载它。 | 可作为旧交互参考；重新启用前应明确独立入口或模块化。 |
-
-### 3.6 测试
-
-| 文件 | 覆盖内容 |
-| --- | --- |
-| `tests/test_source_pipeline.py` | SourceResolver 路由、各 Web Search/Reader provider、SourceDocument schema、provenance 和文件来源。 |
-| `tests/test_url_animation_pipeline.py` | NormalizedDocument 兼容转换、安全 URL 拒绝、统一来源摄取和完整动画编排。 |
-
-> 当前 `.gitignore` 工作区修改包含过宽的 `tests` 规则，会让这两份测试从普通 `git status` 中消失；建立 baseline 提交前必须移除或缩窄该规则，并确认测试文件被 Git 跟踪。
-
-### 3.7 文档与设计资料
-
-| 文件/目录 | 功能 |
-| --- | --- |
-| `docs/document-ingestion-milestone.md` | 第一阶段 URL → DocumentIR → JSON → Viewer 的运行与验证说明。 |
-| `docs/web-ingestion-crawl4ai.md` | 新 Web 采集层的架构、安全、配置、使用和升级说明。 |
-| `docs/poject-overall/PROJECT_EXPECTATIONS.md` | 产品愿景、体验目标、Agent 工作流和当前范围。目录名 `poject-overall` 是现有历史命名。 |
-| `docs/poject-overall/TECH_STACK.md` | 后端、前端、动画 Spec 与模板库技术选型。 |
-| `docs/poject-overall/TODO.md` | MVP 功能清单和质量标准。 |
-| `docs/poject-overall/PLAN.md` | 技术栈、任务拆分和阶段计划。 |
-| `docs/interaction-flow/INTERACTION_FLOW.md` | 用户从输入资料到进入交互知识影片的流程说明。 |
-| `docs/interaction-flow/interaction-flow.drawio` | 可继续编辑的 draw.io 流程图源文件。 |
-| `docs/interaction-flow/*.png` | 流程图的预览或导出图片。 |
-| `docs/prompt/Animate Agent 架构分析与技术路线设计.md` | 早期架构分析需求与设计思路，属于参考材料，不是运行时配置。 |
-
-## 4. 哪些地方可以灵活扩展
-
-### 4.1 增加新的输入来源
-
-推荐在 `src/animate_agent/sources/` 下新增 Adapter：
-
-1. 定义输入模型；
-2. 实现 `resolve()`；
-3. 输出统一的 `SourceDocument[]`；
-4. 在 `SourceResolver` 注册确定性路由；
-5. 用离线 fixture 添加单元测试。
-
-不要让路由器依赖 PDF/PPTX 库的内部对象，也不要把供应商专有字段直接塞入稳定模型。
-
-### 4.2 扩展 `SourceDocument[] → DocumentIR`
-
-当前已有独立、确定性的转换 service：
+## 生成流程与错误处理
 
 ```text
-SourceDocument[] → DocumentIRBuilder → Pydantic validation → persistence/API
+Query → 搜索与正文读取 → DocumentIR → 意图分镜
+URL / File / Text → 受控适配器 → DocumentIR → 课程大纲 → 分镜
+                                       ↓
+                         Schema / 来源 / 维度 / 数值校验
+                                       ↓
+                         确定性编译 → AnimationIR / RenderSpec
+                                       ↓
+                       Remotion + JSXGraph + mathjs 播放器
 ```
 
-Builder 不得导入 Crawl4AI、Web Search、HTTP fetch 或供应商 response 类型。
+可组合基础能力包括小球、矢量、载具、轨迹、曲线、矩阵、token 序列、概率图和读数。模型通过受限算子声明计算关系，可以选择参数、查表、矩阵乘法、softmax 等，不需要为每个问题编写一套场景代码。
 
-### 4.3 扩展 DocumentIR
+生成是后台任务。界面显示真实阶段、耗时与修复状态；刷新后可恢复任务。优先使用 SSE，连接失败时轮询状态。GET 状态请求不等于重复调用大模型。
 
-可以在 `documents/models.py` 增加表格、引用、公式、术语、来源定位等稳定语义类型，但需要同步修改：
+模型输出仍可能不符合结构、数值或来源约束。服务会返回具体错误并进行有限修复；耗尽次数后停止，不会无限重试，也不会把无效数据强行送入播放器。
 
-- `documents/parser.py` 的提取逻辑；
-- `frontend/app/page.tsx` 的类型和渲染分支；
-- `test_source_pipeline.py` / `test_url_animation_pipeline.py` 及相关 fixture；
-- 已持久化 JSON 的兼容或迁移策略。
+每次运行的诊断产物保存在 `data/runs/<run_id>/`：
 
-### 4.4 扩展 Storyboard 与 RenderSpec
+- `01-source-document.json`、`02-document-ir.json`：采集材料及标准化证据；
+- `04-storyboard-ir.json`：通过校验的分镜；
+- `05-animation-ir.json`、`06-render-spec.json`：编译后的播放器数据；
+- `*-attempt-*-raw.txt` / `*-error.txt`：被拒绝的模型输出及原因。
 
-- 语义对象、步骤和控件契约放在 `storyboard/models.py`；
-- 可用 role、primitive、prop 和 behavior 放在 `rendering/registry.py`；
-- 确定性坐标与几何转换放在 `rendering/layout.py`；
-- 浏览器绘制和行为分别放在 `frontend/player/primitives.js` 与 `behaviors.js`。
+只有成功阶段才会留下相应文件。Query 路径不调用课程大纲模型。运行数据、SQLite 任务库、密钥和临时预览不会提交到仓库。
 
-新增 primitive 时必须同步 Python registry/layout、严格 `RenderSpec` 模型和 JavaScript player；未知类型应显式失败，不能静默丢弃。
+## 检查与生产构建
 
-### 4.5 Renderer 能力边界
-
-当前真正实现并接入的是 Canvas 2D。配置中的 `svg_2d`、`three_3d` 只是允许值，尚无对应编译器或播放器；`renderer_hint` 当前不会选择另一套引擎。
-
-在新增 SVG、Three.js 或视频渲染器前，应先定义能力矩阵、路由位置和版本兼容策略。Renderer 只能消费受控 Spec，并对支持的元素与控件做显式校验。
-
-### 4.6 扩展 AI 阶段
-
-当前 Query 动画由 Intent Storyboard Agent 在受控检索后直接生成 `StoryboardIR`；URL/File/Text 仍保留 Knowledge Agent → Storyboard Agent 的兼容路径。AI 阶段只用于：
-
-- 以用户学习意图为主线，从证据中选择值得动态解释的过程、关系、状态和因果；
-- 为动画中的事实 claim 绑定可追溯 `source_refs`；
-- 规划 Storyboard；
-- 从已登记的模板和视觉组件中选择组合；
-- 生成旁白、镜头参数和交互提示。
-
-模型只生成受 Schema 约束的 StoryboardIR。几何布局、AnimationIR 编译、Timeline
-采样和 Scene State 计算均在本地完成；Canvas2DRenderer 不读取 Prompt、effect、
-Timeline 或浏览器时钟，只把当前帧 Scene State 转换为绘制操作。
-
-AI 输出仍应通过 Pydantic/JSON Schema 校验，并限制为允许的模板、元素、属性和动作；不要让模型输出任意前端代码再执行。
-
-### 4.7 调整采集安全与内容保留
-
-`WebIngestionConfig` 可调整域名白名单、超时、重定向、最大 HTML 大小、JavaScript、缓存、链接/图片提取和 `minimal/standard/full` 保留策略。生产环境不要仅依赖 Python 校验，还应使用隔离容器和出口网络规则阻止私网访问。
-
-## 5. 开发与验证
-
-运行 Python 单元测试和静态检查：
-
-```powershell
-uv run pytest
+```bash
+uv run pytest -q
 uv run ruff check src tests
 uv run mypy src
-```
-
-运行前端检查：
-
-```powershell
+npm --prefix frontend run test:player
 npm --prefix frontend run typecheck
-npm --prefix frontend run build
 ```
 
-当前仓库没有 `tests/integration/test_crawl4ai_smoke.py`。真实 Crawl4AI 或外网验证必须单独、显式运行；普通测试应使用 fake client/snapshot。前端 `typecheck/build` 只能证明编译通过；修改视觉或交互后，还应在真实浏览器中检查布局、输入、错误态和操作流程。
+停止前端开发服务器后再构建，避免开发与生产共享 `.next`：
 
-## 6. 当前限制与建议开发顺序
+```bash
+npm --prefix frontend run build
+npm --prefix frontend run start
+```
 
-当前限制：
+本地 API 不应直接作为开放的公共生成服务；公开部署需要鉴权、限流、费用控制与出站网络隔离。现有部署说明：[Azure](docs/azure-vm-deploy.md)、[华为云](docs/huaweicloud-ecs-deploy.md)、[小艺接入](docs/xiaoyi-integration.md)。具体可用部署文件以仓库内容为准。
 
-- URL 动画生成是同步请求，两次 LLM 调用与单页读取可能耗时较长，尚无队列和进度 API；
-- `RenderSpec` 虽会落盘，但当前网页使用 `sessionStorage` 交给播放器，尚无可分享结果 ID 页面；
-- Python 与 JavaScript 各自维护一份 render vocabulary，存在 primitive/prop 漂移风险；播放器尚未检查 `spec_version`；
-- 配置允许 `svg_2d`、`three_3d`，但当前只有 Canvas 2D 实现；
-- FileAdapter 当前经过 `DocumentIR → Markdown → SourceDocument → DocumentIR` 的重复转换；
-- `SourceDocument` 主路径与 `NormalizedDocument` 兼容路径并存，边界尚未收敛；
-- Crawl4AI 应用层检查不能替代生产环境的容器隔离和网络出口控制；
-- legacy `documents/fetcher.py` 仍保留，但当前 URL API 已不再调用它；
-- query 搜索默认需要 `GEMINI_API_KEY`，也可选择 OpenAI 或 Kimi Tools Search；URL 默认走本地安全 Reader，也可选择 Kimi Tools Fetch；Kimi 搜索、抓取及后续 LLM 阶段可以复用同一项目 `KIMI_KEY`。
+## 主要文件
 
-建议开发顺序：
+- `src/animate_agent/sources/`：受控检索、正文读取与来源保留。
+- `src/animate_agent/visualization/`：问题意图驱动的分镜与有限修复。
+- `src/animate_agent/composition.py`：可组合计算图和图元的 Schema。
+- `src/animate_agent/composition_math.py`：后端数值预检。
+- `frontend/player/composable/`：浏览器算子与 ElementRegistry。
+- `frontend/app/player/`：通用播放器与参数交互。
+- `frontend/app/demos/`、`frontend/public/demos/`：可直接体验的示例及审核后的数据。
 
-1. 审核并提交 `baseline/pre-refactor`：修正测试忽略规则，纳入两份测试，排除 secret、生成物和临时目录；
-2. 让 renderer 配置与真实 Canvas 能力一致，并让播放器拒绝不支持的 `spec_version`；
-3. 消除 FileAdapter 的重复解析，同时用聚焦测试证明各文件格式的结构与 provenance 不退化。
+详细说明：[组件库](docs/element-registry.md) · [检索深度](docs/search-depth.md) · [雷达实验](docs/lidar-demo-report.md)。
 
-更完整的产品目标和交互流程可继续阅读 [`docs/poject-overall/PROJECT_EXPECTATIONS.md`](docs/poject-overall/PROJECT_EXPECTATIONS.md) 与 [`docs/interaction-flow/INTERACTION_FLOW.md`](docs/interaction-flow/INTERACTION_FLOW.md)。
+本项目仍是研究原型。Schema 通过不等于教学内容必然正确；发布示例需要同时检查数值关系、来源与实际画面。第三方库的许可适用各自条款，Remotion 的商业使用要求请按其官方许可确认。

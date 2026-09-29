@@ -7,6 +7,7 @@ from pathlib import Path
 from pytest import MonkeyPatch, raises
 
 import animate_agent.animation.service as animation_service
+from animate_agent.composition import curve_example
 from animate_agent.documents.models import DocumentBlock, DocumentIR, DocumentSource, Section
 from animate_agent.llm import LLMConfig
 from animate_agent.paths import STORYBOARD_SAMPLES_DIR
@@ -98,12 +99,23 @@ def _storyboard_payload() -> dict[str, object]:
     for step in scene["steps"]:
         step["source_refs"] = ["tcp-handshake-evidence"]
     scene["controls"] = []
-    phases = ["send", "travel", "ack", "deliver"]
     scene["mechanism"] = {
-        "kind": "packet_network", "protocol": "tcp_handshake", "drop_first": False,
+        "kind": "composition", "goal": "观察消息到达接收端",
+        "observable_change": "消息从发送端移动到接收端",
         "source_refs": ["tcp-handshake-evidence"],
-        "phases": phases[:len(scene["steps"])],
+        "nodes": [
+            {"id": "client", "op": "constant", "value": [-2, 0]},
+            {"id": "server", "op": "constant", "value": [2, 0]},
+            {"id": "progress", "op": "parameter", "value": .5, "min": 0, "max": 1},
+            {"id": "packet", "op": "lerp", "args": ["client", "server", "progress"]},
+        ],
+        "visuals": [{"id": "packet-view", "kind": "point", "data": "packet", "label": "消息",
+                     "source_refs": ["tcp-handshake-evidence"]}],
+        "phases": [{"visible": ["packet-view"], "focus": ["packet-view"]} for _ in scene["steps"]],
     }
+    for step in scene["steps"]:
+        step["highlights"] = ["packet-view"]
+        step["object_states"] = {}
     return payload
 
 
@@ -151,10 +163,10 @@ def test_evidence_prompt_is_intent_led_and_does_not_require_full_coverage() -> N
     assert "tcp-handshake-evidence" in prompt
     assert "unrelated-evidence" in prompt
     assert "不要求覆盖全部 evidence" in prompt or "无关材料必须舍弃" in prompt
-    assert '"role": "node"' in prompt
-    assert '"props":' in prompt
+    assert '"kind": "ball"' in prompt
+    assert '"kind": "vector_arrow"' in prompt
     assert '"object_states":' in prompt
-    assert '"source_refs": ["evidence-block-id"]' in prompt
+    assert '"motion-evidence"' in prompt
     assert "2+2+2" in prompt
     assert "禁止每个场景各写 3~4 拍" in prompt
     assert len(evidence.items) == 2
@@ -240,7 +252,8 @@ def test_intent_agent_reserves_a_semantic_repair_after_schema_recovery() -> None
         "invented-source"
     ]
     valid = _storyboard_payload()
-    llm = SequenceLLM([schema_invalid, semantic_invalid, valid])
+    patch = {"repaired_scenes": [{"index": 0, "scene": semantic_invalid["scenes"][0]}]}
+    llm = SequenceLLM([schema_invalid, patch, valid])
     agent = IntentStoryboardAgent(llm, limits=build_limits(), max_retries=2)  # type: ignore[arg-type]
 
     storyboard = asyncio.run(agent.generate(_intent(), _document()))
@@ -249,6 +262,9 @@ def test_intent_agent_reserves_a_semantic_repair_after_schema_recovery() -> None
     assert len(llm.calls) == 3
     assert "schema 不符" in llm.calls[1][1]["content"]
     assert "claim_source_ref_unknown" in llm.calls[2][1]["content"]
+    feedback = llm.calls[2][1]["content"].split("<previous_invalid_output>")[1]
+    repaired_document = json.loads(feedback.split("</previous_invalid_output>")[0])
+    assert "scenes" in repaired_document and "repaired_scenes" not in repaired_document
 
 
 def test_intent_storyboard_service_persists_the_validated_storyboard(tmp_path: Path) -> None:
@@ -336,3 +352,72 @@ def test_query_animation_uses_intent_storyboard_without_generating_lesson(
     } <= {path.name for path in run_directory.iterdir()}
     skipped_lesson = json.loads((run_directory / "03-lesson-ir.json").read_text(encoding="utf-8"))
     assert skipped_lesson["status"] == "skipped"
+
+
+def test_phase_mismatch_repair_includes_global_budget_and_specific_failure():
+    valid = _storyboard_payload()
+    invalid = json.loads(json.dumps(valid))
+    scene = invalid["scenes"][0]
+    scene["mechanism"]["phases"] *= 2
+    patch = {"repaired_scenes": [{"index": 0, "scene": valid["scenes"][0]}]}
+    llm = SequenceLLM([invalid, patch])
+    agent = IntentStoryboardAgent(llm, limits=build_limits(), max_retries=2)
+    result = asyncio.run(agent.generate(_intent(), _document()))
+    assert len(result.scenes[0].steps) == len(result.scenes[0].mechanism.phases)
+    prompt = llm.calls[1][1]["content"]
+    assert "未修改场景已有 0 拍" in prompt
+    assert "同步压缩 phases 和 steps" in prompt
+    assert "3~7 拍" in prompt
+
+    failing = IntentStoryboardAgent(FakeLLM(invalid), limits=build_limits(), max_retries=1)
+    with raises(StoryboardGenerationError) as error:
+        asyncio.run(failing.generate(_intent(), _document()))
+    assert "动画阶段" in error.value.summary
+    assert "简化问题" not in error.value.summary
+
+
+def test_literal_arg_does_not_spend_another_model_call():
+    payload = _storyboard_payload()
+    nodes = payload["scenes"][0]["mechanism"]["nodes"]
+    nodes.append({"id": "coordinate", "op": "item", "args": ["packet", "0"]})
+    llm = FakeLLM(payload)
+    agent = IntentStoryboardAgent(llm, limits=build_limits(), max_retries=1)
+    result = asyncio.run(agent.generate(_intent(), _document()))
+    assert len(llm.calls) == 1
+    mechanism = result.scenes[0].mechanism
+    lookup = next(n for n in mechanism.nodes if n.id == "coordinate")
+    assert lookup.args[1].startswith("literal-")
+
+
+def test_curve_repair_collects_geometry_and_unbound_evidence_in_one_round():
+    valid = _storyboard_payload()
+    scene = valid["scenes"][0]
+    plan = curve_example()
+    plan["source_refs"] = ["tcp-handshake-evidence"]
+    for view in plan["visuals"]:
+        view["source_refs"] = ["tcp-handshake-evidence"]
+    plan["phases"] *= len(scene["steps"])
+    scene["mechanism"] = plan
+    for step in scene["steps"]:
+        step["highlights"] = ["curve", "point"]
+    invalid = json.loads(json.dumps(valid))
+    invalid["scenes"][0]["mechanism"]["visuals"][0]["data"] = "x"
+    invalid["scenes"][0]["mechanism"]["visuals"][1]["data"] = "tx"
+    invalid["scenes"][0]["claims"][0]["source_refs"] = ["unrelated-evidence"]
+    llm = SequenceLLM([invalid, {"repaired_scenes": [{"index": 0, "scene": scene}]}])
+    result = asyncio.run(IntentStoryboardAgent(
+        llm, limits=build_limits(), max_retries=2,
+    ).generate(_intent(), _document()))
+    assert result.scenes[0].mechanism.visuals[0].data == "xy"
+    feedback = llm.calls[1][1]["content"].split("校验错误：")[1]
+    assert "visuals.0.data" in feedback and "visuals.1.data" in feedback
+    assert "claims[0].source_refs 未绑定到画面" in feedback
+
+
+def test_evidence_union_still_rejects_invented_sources_against_document():
+    payload = _storyboard_payload()
+    payload["scenes"][0]["mechanism"]["visuals"][0]["source_refs"].append("invented")
+    with raises(StoryboardGenerationError, match="invented"):
+        asyncio.run(IntentStoryboardAgent(
+            FakeLLM(payload), limits=build_limits(), max_retries=1,
+        ).generate(_intent(), _document()))

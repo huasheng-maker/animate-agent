@@ -1,0 +1,3274 @@
+{
+  "spec_version": 1,
+  "storyboard_id": "storyboard-intent-be24b2bce27f5f0b1763",
+  "lesson_id": "intent-be24b2bce27f5f0b1763",
+  "document_id": "be24b2bce27f5f0b1763",
+  "learning_intent": "用动画解释匀速圆周运动中速度与加速度的方向，并让我改变半径和角速度观察变化。",
+  "title": "匀速圆周运动的速度与加速度",
+  "subject": "运动学",
+  "eyebrow": "矢量与向心加速度",
+  "stage": {
+    "width": 960.0,
+    "height": 600.0
+  },
+  "scenes": [
+    {
+      "id": "circular-motion",
+      "mechanism": {
+        "kind": "composition",
+        "goal": "观察圆周运动的速度与加速度方向，并调节半径和角速度",
+        "observable_change": "质点沿圆周运动，速度保持切向，加速度始终指向圆心；调节滑杆可改变半径和角速度，观察矢量变化",
+        "example_label": "教学示例 · 非实测参数",
+        "source_refs": [
+          "source-65ecf18d-section-8853c7e6cb-block-3",
+          "source-65ecf18d-section-8853c7e6cb-block-4",
+          "source-65ecf18d-section-a3c372833d-block-3",
+          "source-65ecf18d-section-094a29c50d-block-6",
+          "source-65ecf18d-section-24ab0f890c-block-5"
+        ],
+        "nodes": [
+          {
+            "id": "r",
+            "op": "parameter",
+            "args": [],
+            "value": 2.5,
+            "label": "半径 r",
+            "min": 1.0,
+            "max": 4.0,
+            "step": 0.1
+          },
+          {
+            "id": "omega",
+            "op": "parameter",
+            "args": [],
+            "value": 0.8,
+            "label": "角速度 ω",
+            "min": 0.3,
+            "max": 1.5,
+            "step": 0.1
+          },
+          {
+            "id": "t",
+            "op": "time",
+            "args": [],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "theta",
+            "op": "multiply",
+            "args": [
+              "omega",
+              "t"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "c",
+            "op": "cos",
+            "args": [
+              "theta"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "s",
+            "op": "sin",
+            "args": [
+              "theta"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "unit-r",
+            "op": "vector",
+            "args": [
+              "c",
+              "s"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "position",
+            "op": "multiply",
+            "args": [
+              "r",
+              "unit-r"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "neg1",
+            "op": "constant",
+            "args": [],
+            "value": -1.0,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "neg-s",
+            "op": "multiply",
+            "args": [
+              "neg1",
+              "s"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "tangent",
+            "op": "vector",
+            "args": [
+              "neg-s",
+              "c"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "v-mag",
+            "op": "multiply",
+            "args": [
+              "r",
+              "omega"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "velocity",
+            "op": "multiply",
+            "args": [
+              "v-mag",
+              "tangent"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "omega2",
+            "op": "multiply",
+            "args": [
+              "omega",
+              "omega"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "a-mag",
+            "op": "multiply",
+            "args": [
+              "r",
+              "omega2"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "neg-a",
+            "op": "multiply",
+            "args": [
+              "neg1",
+              "a-mag"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "acceleration",
+            "op": "multiply",
+            "args": [
+              "neg-a",
+              "unit-r"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "zero",
+            "op": "constant",
+            "args": [],
+            "value": 0.0,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "origin",
+            "op": "vector",
+            "args": [
+              "zero",
+              "zero"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          }
+        ],
+        "visuals": [
+          {
+            "id": "orbit-circle",
+            "kind": "circle",
+            "data": "r",
+            "radius": 0.15,
+            "mass": 1.0,
+            "glow": false,
+            "origin": null,
+            "active_index": null,
+            "reveal_count": null,
+            "label": "圆形轨道",
+            "labels": [],
+            "color": "blue",
+            "source_refs": [
+              "source-65ecf18d-section-a3c372833d-block-3"
+            ],
+            "sample_range": [
+              -3.0,
+              3.0
+            ],
+            "trail_seconds": 2.0
+          },
+          {
+            "id": "particle",
+            "kind": "ball",
+            "data": "position",
+            "radius": 0.2,
+            "mass": 1.0,
+            "glow": true,
+            "origin": null,
+            "active_index": null,
+            "reveal_count": null,
+            "label": "质点",
+            "labels": [],
+            "color": "teal",
+            "source_refs": [
+              "source-65ecf18d-section-8853c7e6cb-block-3"
+            ],
+            "sample_range": [
+              -3.0,
+              3.0
+            ],
+            "trail_seconds": 2.0
+          },
+          {
+            "id": "v-arrow",
+            "kind": "vector_arrow",
+            "data": "velocity",
+            "radius": 0.15,
+            "mass": 1.0,
+            "glow": false,
+            "origin": "position",
+            "active_index": null,
+            "reveal_count": null,
+            "label": "速度 v（切向）",
+            "labels": [],
+            "color": "gold",
+            "source_refs": [
+              "source-65ecf18d-section-8853c7e6cb-block-4"
+            ],
+            "sample_range": [
+              -3.0,
+              3.0
+            ],
+            "trail_seconds": 2.0
+          },
+          {
+            "id": "a-arrow",
+            "kind": "vector_arrow",
+            "data": "acceleration",
+            "radius": 0.15,
+            "mass": 1.0,
+            "glow": false,
+            "origin": "position",
+            "active_index": null,
+            "reveal_count": null,
+            "label": "加速度 a（向心）",
+            "labels": [],
+            "color": "red",
+            "source_refs": [
+              "source-65ecf18d-section-8853c7e6cb-block-3",
+              "source-65ecf18d-section-a3c372833d-block-3"
+            ],
+            "sample_range": [
+              -3.0,
+              3.0
+            ],
+            "trail_seconds": 2.0
+          },
+          {
+            "id": "v-readout",
+            "kind": "readout",
+            "data": "v-mag",
+            "radius": 0.15,
+            "mass": 1.0,
+            "glow": false,
+            "origin": null,
+            "active_index": null,
+            "reveal_count": null,
+            "label": "v = ωr",
+            "labels": [],
+            "color": "gold",
+            "source_refs": [
+              "source-65ecf18d-section-094a29c50d-block-6"
+            ],
+            "sample_range": [
+              -3.0,
+              3.0
+            ],
+            "trail_seconds": 2.0
+          },
+          {
+            "id": "a-readout",
+            "kind": "readout",
+            "data": "a-mag",
+            "radius": 0.15,
+            "mass": 1.0,
+            "glow": false,
+            "origin": null,
+            "active_index": null,
+            "reveal_count": null,
+            "label": "a = ω²r",
+            "labels": [],
+            "color": "red",
+            "source_refs": [
+              "source-65ecf18d-section-24ab0f890c-block-5"
+            ],
+            "sample_range": [
+              -3.0,
+              3.0
+            ],
+            "trail_seconds": 2.0
+          }
+        ],
+        "phases": [
+          {
+            "focus": [
+              "particle",
+              "v-arrow"
+            ],
+            "visible": [
+              "orbit-circle",
+              "particle",
+              "v-arrow",
+              "a-arrow",
+              "v-readout",
+              "a-readout"
+            ]
+          },
+          {
+            "focus": [
+              "particle",
+              "a-arrow"
+            ],
+            "visible": [
+              "orbit-circle",
+              "particle",
+              "v-arrow",
+              "a-arrow",
+              "v-readout",
+              "a-readout"
+            ]
+          },
+          {
+            "focus": [
+              "v-readout",
+              "a-readout"
+            ],
+            "visible": [
+              "orbit-circle",
+              "particle",
+              "v-arrow",
+              "a-arrow",
+              "v-readout",
+              "a-readout"
+            ]
+          }
+        ],
+        "x_range": [
+          -5.0,
+          5.0
+        ],
+        "y_range": [
+          -4.0,
+          4.0
+        ]
+      },
+      "title": "",
+      "teaching_goal": "观察速度切向、加速度指向圆心",
+      "learning_question": "匀速圆周运动中速度与加速度的方向关系是什么？",
+      "visual_pattern": "spatial_relation",
+      "claims": [
+        {
+          "id": "claim-velocity-tangent",
+          "text": "匀速圆周运动的速度方向始终沿轨迹切线，与半径垂直。",
+          "source_refs": [
+            "source-65ecf18d-section-8853c7e6cb-block-3",
+            "source-65ecf18d-section-8853c7e6cb-block-4"
+          ]
+        },
+        {
+          "id": "claim-acceleration-center",
+          "text": "向心加速度方向始终指向圆心，反映速度方向改变的快慢。",
+          "source_refs": [
+            "source-65ecf18d-section-8853c7e6cb-block-3",
+            "source-65ecf18d-section-a3c372833d-block-3"
+          ]
+        },
+        {
+          "id": "claim-omega-constant",
+          "text": "匀速圆周运动的角速度大小不变，线速度大小不变但方向时刻改变。",
+          "source_refs": [
+            "source-65ecf18d-section-a3c372833d-block-3"
+          ]
+        },
+        {
+          "id": "claim-formulas",
+          "text": "线速度 v=ωr，向心加速度 a=v²/r=ω²r，大小与半径和角速度相关。",
+          "source_refs": [
+            "source-65ecf18d-section-094a29c50d-block-6",
+            "source-65ecf18d-section-24ab0f890c-block-5"
+          ]
+        }
+      ],
+      "preset": "chain",
+      "attachment": {},
+      "thresholds": {},
+      "elements": [
+        {
+          "id": "orbit-circle",
+          "role": "node",
+          "label": "圆形轨道",
+          "x": 137.14285714285714,
+          "y": 300.0,
+          "tone": "normal",
+          "props": {},
+          "binds": {},
+          "kind": "body",
+          "shape": "rect",
+          "width": 96.0,
+          "height": 48.0,
+          "sides": 6,
+          "inner_ratio": 1.0,
+          "heading": 0.0,
+          "glyph": null,
+          "path": [],
+          "duration": 0.0
+        },
+        {
+          "id": "particle",
+          "role": "node",
+          "label": "质点",
+          "x": 274.2857142857143,
+          "y": 300.0,
+          "tone": "normal",
+          "props": {},
+          "binds": {},
+          "kind": "body",
+          "shape": "rect",
+          "width": 96.0,
+          "height": 48.0,
+          "sides": 6,
+          "inner_ratio": 1.0,
+          "heading": 0.0,
+          "glyph": null,
+          "path": [],
+          "duration": 0.0
+        },
+        {
+          "id": "v-arrow",
+          "role": "node",
+          "label": "速度 v（切向）",
+          "x": 411.42857142857144,
+          "y": 300.0,
+          "tone": "normal",
+          "props": {},
+          "binds": {},
+          "kind": "body",
+          "shape": "rect",
+          "width": 96.0,
+          "height": 48.0,
+          "sides": 6,
+          "inner_ratio": 1.0,
+          "heading": 0.0,
+          "glyph": null,
+          "path": [],
+          "duration": 0.0
+        },
+        {
+          "id": "a-arrow",
+          "role": "node",
+          "label": "加速度 a（向心）",
+          "x": 548.5714285714286,
+          "y": 300.0,
+          "tone": "normal",
+          "props": {},
+          "binds": {},
+          "kind": "body",
+          "shape": "rect",
+          "width": 96.0,
+          "height": 48.0,
+          "sides": 6,
+          "inner_ratio": 1.0,
+          "heading": 0.0,
+          "glyph": null,
+          "path": [],
+          "duration": 0.0
+        },
+        {
+          "id": "v-readout",
+          "role": "node",
+          "label": "v = ωr",
+          "x": 685.7142857142857,
+          "y": 300.0,
+          "tone": "normal",
+          "props": {},
+          "binds": {},
+          "kind": "body",
+          "shape": "rect",
+          "width": 96.0,
+          "height": 48.0,
+          "sides": 6,
+          "inner_ratio": 1.0,
+          "heading": 0.0,
+          "glyph": null,
+          "path": [],
+          "duration": 0.0
+        },
+        {
+          "id": "a-readout",
+          "role": "node",
+          "label": "a = ω²r",
+          "x": 822.8571428571429,
+          "y": 300.0,
+          "tone": "normal",
+          "props": {},
+          "binds": {},
+          "kind": "body",
+          "shape": "rect",
+          "width": 96.0,
+          "height": 48.0,
+          "sides": 6,
+          "inner_ratio": 1.0,
+          "heading": 0.0,
+          "glyph": null,
+          "path": [],
+          "duration": 0.0
+        }
+      ],
+      "steps": [
+        {
+          "id": "step-velocity",
+          "title": "切向速度",
+          "narration": "观察质点运动时，金色速度箭头始终与圆轨道相切，方向随位置变化而转动，大小由半径和角速度决定。",
+          "highlights": [
+            "particle",
+            "v-arrow"
+          ],
+          "states": {},
+          "source_refs": [
+            "source-65ecf18d-section-8853c7e6cb-block-4"
+          ]
+        },
+        {
+          "id": "step-acceleration",
+          "title": "向心加速度",
+          "narration": "观察红色加速度箭头始终指向圆心，与速度方向垂直，只改变速度方向而不改变速度大小。",
+          "highlights": [
+            "particle",
+            "a-arrow"
+          ],
+          "states": {},
+          "source_refs": [
+            "source-65ecf18d-section-8853c7e6cb-block-3",
+            "source-65ecf18d-section-a3c372833d-block-3"
+          ]
+        },
+        {
+          "id": "step-interactive",
+          "title": "调节观察",
+          "narration": "拖动半径和角速度滑杆，观察速度大小和加速度大小如何变化，验证公式 v=ωr 和 a=ω²r。",
+          "highlights": [
+            "v-readout",
+            "a-readout"
+          ],
+          "states": {},
+          "source_refs": [
+            "source-65ecf18d-section-094a29c50d-block-6",
+            "source-65ecf18d-section-24ab0f890c-block-5"
+          ]
+        }
+      ],
+      "controls": [
+        {
+          "id": "program-r",
+          "type": "slider",
+          "label": "半径 r",
+          "target_property": "circular-motion-program.r",
+          "min": 1.0,
+          "max": 4.0,
+          "default": 2.5,
+          "step": 0.1,
+          "unit": "",
+          "action": null
+        },
+        {
+          "id": "program-omega",
+          "type": "slider",
+          "label": "角速度 ω",
+          "target_property": "circular-motion-program.omega",
+          "min": 0.3,
+          "max": 1.5,
+          "default": 0.8,
+          "step": 0.1,
+          "unit": "",
+          "action": null
+        }
+      ],
+      "params": {}
+    }
+  ],
+  "animation_ir": {
+    "irVersion": 1,
+    "fps": 60.0,
+    "stage": {
+      "width": 960.0,
+      "height": 600.0
+    },
+    "metadata": {
+      "storyboardId": "storyboard-intent-be24b2bce27f5f0b1763",
+      "lessonId": "intent-be24b2bce27f5f0b1763",
+      "documentId": "be24b2bce27f5f0b1763",
+      "learningIntent": "用动画解释匀速圆周运动中速度与加速度的方向，并让我改变半径和角速度观察变化。",
+      "title": "匀速圆周运动的速度与加速度",
+      "subject": "运动学",
+      "eyebrow": "矢量与向心加速度",
+      "sourceFormat": "storyboard-compiler-v1"
+    },
+    "citations": [
+      {
+        "id": "source-65ecf18d-section-a3c372833d-block-3",
+        "title": "圆周运动",
+        "locator": "特点",
+        "excerpt": "匀速圆周运动的特点：轨迹是圆，角速度，周期，线速度的大小(注：因为线速度是矢量,\"线速度\"大小是不变的，而方向时时在变化)和向心加速度的大小不变，且向心加速度方向总是指向圆心。",
+        "url": "https://baike.baidu.com/item/%E5%9C%86%E5%91%A8%E8%BF%90%E5%8A%A8/1532524"
+      },
+      {
+        "id": "source-65ecf18d-section-094a29c50d-block-6",
+        "title": "圆周运动",
+        "locator": "主要公式",
+        "excerpt": "求线速度，除了可以用 ,也可推导出v=2πr/T（注：T为周期）=ωr=2πrn（注：n代表转速，n与T可以互相转换，公式为T=1/n），π代表圆周率",
+        "url": "https://baike.baidu.com/item/%E5%9C%86%E5%91%A8%E8%BF%90%E5%8A%A8/1532524"
+      },
+      {
+        "id": "source-65ecf18d-section-8853c7e6cb-block-3",
+        "title": "圆周运动",
+        "locator": "著名理论",
+        "excerpt": "任何物体在作圆周运动时需要一个向心力，因为它在不断改变速度。对象的速度的速率大小不变，但方向一直在改变。只有合适大小的向心力才能维持物体在圆轨道上运动。这个加速度（速度是一个矢量，改变方向的同时可以不改变大小）是由向心力提供的，如果不具备这一条件，物体将脱离圆轨道。注意，向心加速度是反映线速度方向改变的快慢。",
+        "url": "https://baike.baidu.com/item/%E5%9C%86%E5%91%A8%E8%BF%90%E5%8A%A8/1532524"
+      },
+      {
+        "id": "source-65ecf18d-section-8853c7e6cb-block-4",
+        "title": "圆周运动",
+        "locator": "著名理论",
+        "excerpt": "物体在作圆周运动时速度的方向相切于圆周路径。匀速圆周运动物体所受合 力的方向一直指向圆心，即此来改变速度的方向。",
+        "url": "https://baike.baidu.com/item/%E5%9C%86%E5%91%A8%E8%BF%90%E5%8A%A8/1532524"
+      },
+      {
+        "id": "source-65ecf18d-section-24ab0f890c-block-5",
+        "title": "圆周运动",
+        "locator": "匀速相关公式",
+        "excerpt": "7、an（向 心 加 速 度）=rω²=v²/r=r4π²/T²=r4π²n²",
+        "url": "https://baike.baidu.com/item/%E5%9C%86%E5%91%A8%E8%BF%90%E5%8A%A8/1532524"
+      }
+    ],
+    "scenes": [
+      {
+        "id": "circular-motion",
+        "mechanism": {
+          "kind": "composition",
+          "goal": "观察圆周运动的速度与加速度方向，并调节半径和角速度",
+          "observable_change": "质点沿圆周运动，速度保持切向，加速度始终指向圆心；调节滑杆可改变半径和角速度，观察矢量变化",
+          "example_label": "教学示例 · 非实测参数",
+          "source_refs": [
+            "source-65ecf18d-section-8853c7e6cb-block-3",
+            "source-65ecf18d-section-8853c7e6cb-block-4",
+            "source-65ecf18d-section-a3c372833d-block-3",
+            "source-65ecf18d-section-094a29c50d-block-6",
+            "source-65ecf18d-section-24ab0f890c-block-5"
+          ],
+          "nodes": [
+            {
+              "id": "r",
+              "op": "parameter",
+              "args": [],
+              "value": 2.5,
+              "label": "半径 r",
+              "min": 1.0,
+              "max": 4.0,
+              "step": 0.1
+            },
+            {
+              "id": "omega",
+              "op": "parameter",
+              "args": [],
+              "value": 0.8,
+              "label": "角速度 ω",
+              "min": 0.3,
+              "max": 1.5,
+              "step": 0.1
+            },
+            {
+              "id": "t",
+              "op": "time",
+              "args": [],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "theta",
+              "op": "multiply",
+              "args": [
+                "omega",
+                "t"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "c",
+              "op": "cos",
+              "args": [
+                "theta"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "s",
+              "op": "sin",
+              "args": [
+                "theta"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "unit-r",
+              "op": "vector",
+              "args": [
+                "c",
+                "s"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "position",
+              "op": "multiply",
+              "args": [
+                "r",
+                "unit-r"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "neg1",
+              "op": "constant",
+              "args": [],
+              "value": -1.0,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "neg-s",
+              "op": "multiply",
+              "args": [
+                "neg1",
+                "s"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "tangent",
+              "op": "vector",
+              "args": [
+                "neg-s",
+                "c"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "v-mag",
+              "op": "multiply",
+              "args": [
+                "r",
+                "omega"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "velocity",
+              "op": "multiply",
+              "args": [
+                "v-mag",
+                "tangent"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "omega2",
+              "op": "multiply",
+              "args": [
+                "omega",
+                "omega"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "a-mag",
+              "op": "multiply",
+              "args": [
+                "r",
+                "omega2"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "neg-a",
+              "op": "multiply",
+              "args": [
+                "neg1",
+                "a-mag"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "acceleration",
+              "op": "multiply",
+              "args": [
+                "neg-a",
+                "unit-r"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "zero",
+              "op": "constant",
+              "args": [],
+              "value": 0.0,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "origin",
+              "op": "vector",
+              "args": [
+                "zero",
+                "zero"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            }
+          ],
+          "visuals": [
+            {
+              "id": "orbit-circle",
+              "kind": "circle",
+              "data": "r",
+              "radius": 0.15,
+              "mass": 1.0,
+              "glow": false,
+              "origin": null,
+              "active_index": null,
+              "reveal_count": null,
+              "label": "圆形轨道",
+              "labels": [],
+              "color": "blue",
+              "source_refs": [
+                "source-65ecf18d-section-a3c372833d-block-3"
+              ],
+              "sample_range": [
+                -3.0,
+                3.0
+              ],
+              "trail_seconds": 2.0
+            },
+            {
+              "id": "particle",
+              "kind": "ball",
+              "data": "position",
+              "radius": 0.2,
+              "mass": 1.0,
+              "glow": true,
+              "origin": null,
+              "active_index": null,
+              "reveal_count": null,
+              "label": "质点",
+              "labels": [],
+              "color": "teal",
+              "source_refs": [
+                "source-65ecf18d-section-8853c7e6cb-block-3"
+              ],
+              "sample_range": [
+                -3.0,
+                3.0
+              ],
+              "trail_seconds": 2.0
+            },
+            {
+              "id": "v-arrow",
+              "kind": "vector_arrow",
+              "data": "velocity",
+              "radius": 0.15,
+              "mass": 1.0,
+              "glow": false,
+              "origin": "position",
+              "active_index": null,
+              "reveal_count": null,
+              "label": "速度 v（切向）",
+              "labels": [],
+              "color": "gold",
+              "source_refs": [
+                "source-65ecf18d-section-8853c7e6cb-block-4"
+              ],
+              "sample_range": [
+                -3.0,
+                3.0
+              ],
+              "trail_seconds": 2.0
+            },
+            {
+              "id": "a-arrow",
+              "kind": "vector_arrow",
+              "data": "acceleration",
+              "radius": 0.15,
+              "mass": 1.0,
+              "glow": false,
+              "origin": "position",
+              "active_index": null,
+              "reveal_count": null,
+              "label": "加速度 a（向心）",
+              "labels": [],
+              "color": "red",
+              "source_refs": [
+                "source-65ecf18d-section-8853c7e6cb-block-3",
+                "source-65ecf18d-section-a3c372833d-block-3"
+              ],
+              "sample_range": [
+                -3.0,
+                3.0
+              ],
+              "trail_seconds": 2.0
+            },
+            {
+              "id": "v-readout",
+              "kind": "readout",
+              "data": "v-mag",
+              "radius": 0.15,
+              "mass": 1.0,
+              "glow": false,
+              "origin": null,
+              "active_index": null,
+              "reveal_count": null,
+              "label": "v = ωr",
+              "labels": [],
+              "color": "gold",
+              "source_refs": [
+                "source-65ecf18d-section-094a29c50d-block-6"
+              ],
+              "sample_range": [
+                -3.0,
+                3.0
+              ],
+              "trail_seconds": 2.0
+            },
+            {
+              "id": "a-readout",
+              "kind": "readout",
+              "data": "a-mag",
+              "radius": 0.15,
+              "mass": 1.0,
+              "glow": false,
+              "origin": null,
+              "active_index": null,
+              "reveal_count": null,
+              "label": "a = ω²r",
+              "labels": [],
+              "color": "red",
+              "source_refs": [
+                "source-65ecf18d-section-24ab0f890c-block-5"
+              ],
+              "sample_range": [
+                -3.0,
+                3.0
+              ],
+              "trail_seconds": 2.0
+            }
+          ],
+          "phases": [
+            {
+              "focus": [
+                "particle",
+                "v-arrow"
+              ],
+              "visible": [
+                "orbit-circle",
+                "particle",
+                "v-arrow",
+                "a-arrow",
+                "v-readout",
+                "a-readout"
+              ]
+            },
+            {
+              "focus": [
+                "particle",
+                "a-arrow"
+              ],
+              "visible": [
+                "orbit-circle",
+                "particle",
+                "v-arrow",
+                "a-arrow",
+                "v-readout",
+                "a-readout"
+              ]
+            },
+            {
+              "focus": [
+                "v-readout",
+                "a-readout"
+              ],
+              "visible": [
+                "orbit-circle",
+                "particle",
+                "v-arrow",
+                "a-arrow",
+                "v-readout",
+                "a-readout"
+              ]
+            }
+          ],
+          "x_range": [
+            -5.0,
+            5.0
+          ],
+          "y_range": [
+            -4.0,
+            4.0
+          ]
+        },
+        "metadata": {
+          "title": "",
+          "teachingGoal": "观察速度切向、加速度指向圆心",
+          "learningQuestion": "匀速圆周运动中速度与加速度的方向关系是什么？",
+          "visualPattern": "spatial_relation",
+          "claims": [
+            {
+              "id": "claim-velocity-tangent",
+              "text": "匀速圆周运动的速度方向始终沿轨迹切线，与半径垂直。",
+              "source_refs": [
+                "source-65ecf18d-section-8853c7e6cb-block-3",
+                "source-65ecf18d-section-8853c7e6cb-block-4"
+              ]
+            },
+            {
+              "id": "claim-acceleration-center",
+              "text": "向心加速度方向始终指向圆心，反映速度方向改变的快慢。",
+              "source_refs": [
+                "source-65ecf18d-section-8853c7e6cb-block-3",
+                "source-65ecf18d-section-a3c372833d-block-3"
+              ]
+            },
+            {
+              "id": "claim-omega-constant",
+              "text": "匀速圆周运动的角速度大小不变，线速度大小不变但方向时刻改变。",
+              "source_refs": [
+                "source-65ecf18d-section-a3c372833d-block-3"
+              ]
+            },
+            {
+              "id": "claim-formulas",
+              "text": "线速度 v=ωr，向心加速度 a=v²/r=ω²r，大小与半径和角速度相关。",
+              "source_refs": [
+                "source-65ecf18d-section-094a29c50d-block-6",
+                "source-65ecf18d-section-24ab0f890c-block-5"
+              ]
+            }
+          ],
+          "preset": "chain"
+        },
+        "nodes": [
+          {
+            "id": "orbit-circle",
+            "kind": "body",
+            "parentId": null,
+            "transform": {
+              "position": {
+                "x": 137.14285714285714,
+                "y": 300.0
+              },
+              "rotation": 0.0,
+              "scale": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "opacity": 1.0,
+              "pathProgress": 0.0
+            },
+            "style": {
+              "tone": "normal",
+              "highlight": false,
+              "glowIntensity": 0.0
+            },
+            "visual": {
+              "id": "orbit-circle",
+              "role": "node",
+              "label": "圆形轨道",
+              "x": 137.14285714285714,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0,
+              "originalText": "",
+              "visibleText": "",
+              "drawProgress": 1.0,
+              "trimStart": 0.0,
+              "trimEnd": 1.0,
+              "revealProgress": 1.0,
+              "cursorVisible": false
+            },
+            "semantic": {
+              "progress": 0.0,
+              "intensity": 0.0,
+              "phase": "idle"
+            },
+            "legacy": {
+              "id": "orbit-circle",
+              "role": "node",
+              "label": "圆形轨道",
+              "x": 137.14285714285714,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          },
+          {
+            "id": "particle",
+            "kind": "body",
+            "parentId": null,
+            "transform": {
+              "position": {
+                "x": 274.2857142857143,
+                "y": 300.0
+              },
+              "rotation": 0.0,
+              "scale": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "opacity": 1.0,
+              "pathProgress": 0.0
+            },
+            "style": {
+              "tone": "normal",
+              "highlight": false,
+              "glowIntensity": 0.0
+            },
+            "visual": {
+              "id": "particle",
+              "role": "node",
+              "label": "质点",
+              "x": 274.2857142857143,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0,
+              "originalText": "",
+              "visibleText": "",
+              "drawProgress": 1.0,
+              "trimStart": 0.0,
+              "trimEnd": 1.0,
+              "revealProgress": 1.0,
+              "cursorVisible": false
+            },
+            "semantic": {
+              "progress": 0.0,
+              "intensity": 0.0,
+              "phase": "idle"
+            },
+            "legacy": {
+              "id": "particle",
+              "role": "node",
+              "label": "质点",
+              "x": 274.2857142857143,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          },
+          {
+            "id": "v-arrow",
+            "kind": "body",
+            "parentId": null,
+            "transform": {
+              "position": {
+                "x": 411.42857142857144,
+                "y": 300.0
+              },
+              "rotation": 0.0,
+              "scale": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "opacity": 1.0,
+              "pathProgress": 0.0
+            },
+            "style": {
+              "tone": "normal",
+              "highlight": false,
+              "glowIntensity": 0.0
+            },
+            "visual": {
+              "id": "v-arrow",
+              "role": "node",
+              "label": "速度 v（切向）",
+              "x": 411.42857142857144,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0,
+              "originalText": "",
+              "visibleText": "",
+              "drawProgress": 1.0,
+              "trimStart": 0.0,
+              "trimEnd": 1.0,
+              "revealProgress": 1.0,
+              "cursorVisible": false
+            },
+            "semantic": {
+              "progress": 0.0,
+              "intensity": 0.0,
+              "phase": "idle"
+            },
+            "legacy": {
+              "id": "v-arrow",
+              "role": "node",
+              "label": "速度 v（切向）",
+              "x": 411.42857142857144,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          },
+          {
+            "id": "a-arrow",
+            "kind": "body",
+            "parentId": null,
+            "transform": {
+              "position": {
+                "x": 548.5714285714286,
+                "y": 300.0
+              },
+              "rotation": 0.0,
+              "scale": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "opacity": 1.0,
+              "pathProgress": 0.0
+            },
+            "style": {
+              "tone": "normal",
+              "highlight": false,
+              "glowIntensity": 0.0
+            },
+            "visual": {
+              "id": "a-arrow",
+              "role": "node",
+              "label": "加速度 a（向心）",
+              "x": 548.5714285714286,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0,
+              "originalText": "",
+              "visibleText": "",
+              "drawProgress": 1.0,
+              "trimStart": 0.0,
+              "trimEnd": 1.0,
+              "revealProgress": 1.0,
+              "cursorVisible": false
+            },
+            "semantic": {
+              "progress": 0.0,
+              "intensity": 0.0,
+              "phase": "idle"
+            },
+            "legacy": {
+              "id": "a-arrow",
+              "role": "node",
+              "label": "加速度 a（向心）",
+              "x": 548.5714285714286,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          },
+          {
+            "id": "v-readout",
+            "kind": "body",
+            "parentId": null,
+            "transform": {
+              "position": {
+                "x": 685.7142857142857,
+                "y": 300.0
+              },
+              "rotation": 0.0,
+              "scale": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "opacity": 1.0,
+              "pathProgress": 0.0
+            },
+            "style": {
+              "tone": "normal",
+              "highlight": false,
+              "glowIntensity": 0.0
+            },
+            "visual": {
+              "id": "v-readout",
+              "role": "node",
+              "label": "v = ωr",
+              "x": 685.7142857142857,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0,
+              "originalText": "",
+              "visibleText": "",
+              "drawProgress": 1.0,
+              "trimStart": 0.0,
+              "trimEnd": 1.0,
+              "revealProgress": 1.0,
+              "cursorVisible": false
+            },
+            "semantic": {
+              "progress": 0.0,
+              "intensity": 0.0,
+              "phase": "idle"
+            },
+            "legacy": {
+              "id": "v-readout",
+              "role": "node",
+              "label": "v = ωr",
+              "x": 685.7142857142857,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          },
+          {
+            "id": "a-readout",
+            "kind": "body",
+            "parentId": null,
+            "transform": {
+              "position": {
+                "x": 822.8571428571429,
+                "y": 300.0
+              },
+              "rotation": 0.0,
+              "scale": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "opacity": 1.0,
+              "pathProgress": 0.0
+            },
+            "style": {
+              "tone": "normal",
+              "highlight": false,
+              "glowIntensity": 0.0
+            },
+            "visual": {
+              "id": "a-readout",
+              "role": "node",
+              "label": "a = ω²r",
+              "x": 822.8571428571429,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0,
+              "originalText": "",
+              "visibleText": "",
+              "drawProgress": 1.0,
+              "trimStart": 0.0,
+              "trimEnd": 1.0,
+              "revealProgress": 1.0,
+              "cursorVisible": false
+            },
+            "semantic": {
+              "progress": 0.0,
+              "intensity": 0.0,
+              "phase": "idle"
+            },
+            "legacy": {
+              "id": "a-readout",
+              "role": "node",
+              "label": "a = ω²r",
+              "x": 822.8571428571429,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          }
+        ],
+        "camera": {
+          "id": "main",
+          "position": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "zoom": 1.0,
+          "rotation": 0.0
+        },
+        "beats": [
+          {
+            "id": "step-velocity",
+            "title": "切向速度",
+            "narration": "观察质点运动时，金色速度箭头始终与圆轨道相切，方向随位置变化而转动，大小由半径和角速度决定。",
+            "sourceRefs": [
+              "source-65ecf18d-section-8853c7e6cb-block-4"
+            ],
+            "durationInFrames": 351,
+            "timeline": {
+              "items": [
+                {
+                  "type": "parallel",
+                  "delay": 0.0,
+                  "children": [
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "particle"
+                      },
+                      "property": "style.glowIntensity",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 0.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.22,
+                          "value": 1.0,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.86,
+                          "value": 0.32,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 0.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "particle"
+                      },
+                      "property": "semantic.phase",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": "entering",
+                          "easing": "linear",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 0.12,
+                          "value": "active",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 1.28,
+                          "value": "settled",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "particle"
+                      },
+                      "property": "transform.scale",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.34,
+                          "value": {
+                            "x": 1.09,
+                            "y": 1.09
+                          },
+                          "easing": "backOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.92,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "v-arrow"
+                      },
+                      "property": "style.glowIntensity",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 0.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.22,
+                          "value": 1.0,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.86,
+                          "value": 0.32,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 0.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.055,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "v-arrow"
+                      },
+                      "property": "semantic.phase",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": "entering",
+                          "easing": "linear",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 0.12,
+                          "value": "active",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 1.28,
+                          "value": "settled",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        }
+                      ],
+                      "delay": 0.055,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "v-arrow"
+                      },
+                      "property": "transform.scale",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.34,
+                          "value": {
+                            "x": 1.09,
+                            "y": 1.09
+                          },
+                          "easing": "backOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.92,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.055,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.position",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": {
+                            "x": -21.94285714285714,
+                            "y": 0.0
+                          },
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.zoom",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 1.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": 1.055,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 1.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    }
+                  ]
+                }
+              ],
+              "effects": []
+            }
+          },
+          {
+            "id": "step-acceleration",
+            "title": "向心加速度",
+            "narration": "观察红色加速度箭头始终指向圆心，与速度方向垂直，只改变速度方向而不改变速度大小。",
+            "sourceRefs": [
+              "source-65ecf18d-section-8853c7e6cb-block-3",
+              "source-65ecf18d-section-a3c372833d-block-3"
+            ],
+            "durationInFrames": 314,
+            "timeline": {
+              "items": [
+                {
+                  "type": "parallel",
+                  "delay": 0.0,
+                  "children": [
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "particle"
+                      },
+                      "property": "style.glowIntensity",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 0.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.22,
+                          "value": 1.0,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.86,
+                          "value": 0.32,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 0.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "particle"
+                      },
+                      "property": "semantic.phase",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": "entering",
+                          "easing": "linear",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 0.12,
+                          "value": "active",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 1.28,
+                          "value": "settled",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "particle"
+                      },
+                      "property": "transform.scale",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.34,
+                          "value": {
+                            "x": 1.09,
+                            "y": 1.09
+                          },
+                          "easing": "backOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.92,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "a-arrow"
+                      },
+                      "property": "style.glowIntensity",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 0.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.22,
+                          "value": 1.0,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.86,
+                          "value": 0.32,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 0.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.055,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "a-arrow"
+                      },
+                      "property": "semantic.phase",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": "entering",
+                          "easing": "linear",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 0.12,
+                          "value": "active",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 1.28,
+                          "value": "settled",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        }
+                      ],
+                      "delay": 0.055,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "a-arrow"
+                      },
+                      "property": "transform.scale",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.34,
+                          "value": {
+                            "x": 1.09,
+                            "y": 1.09
+                          },
+                          "easing": "backOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.92,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.055,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.position",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": {
+                            "x": -10.97142857142857,
+                            "y": 0.0
+                          },
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.zoom",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 1.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": 1.055,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 1.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    }
+                  ]
+                }
+              ],
+              "effects": []
+            }
+          },
+          {
+            "id": "step-interactive",
+            "title": "调节观察",
+            "narration": "拖动半径和角速度滑杆，观察速度大小和加速度大小如何变化，验证公式 v=ωr 和 a=ω²r。",
+            "sourceRefs": [
+              "source-65ecf18d-section-094a29c50d-block-6",
+              "source-65ecf18d-section-24ab0f890c-block-5"
+            ],
+            "durationInFrames": 349,
+            "timeline": {
+              "items": [
+                {
+                  "type": "parallel",
+                  "delay": 0.0,
+                  "children": [
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "v-readout"
+                      },
+                      "property": "style.glowIntensity",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 0.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.22,
+                          "value": 1.0,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.86,
+                          "value": 0.32,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 0.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "v-readout"
+                      },
+                      "property": "semantic.phase",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": "entering",
+                          "easing": "linear",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 0.12,
+                          "value": "active",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 1.28,
+                          "value": "settled",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "v-readout"
+                      },
+                      "property": "transform.scale",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.34,
+                          "value": {
+                            "x": 1.09,
+                            "y": 1.09
+                          },
+                          "easing": "backOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.92,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "a-readout"
+                      },
+                      "property": "style.glowIntensity",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 0.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.22,
+                          "value": 1.0,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.86,
+                          "value": 0.32,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 0.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.055,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "a-readout"
+                      },
+                      "property": "semantic.phase",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": "entering",
+                          "easing": "linear",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 0.12,
+                          "value": "active",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 1.28,
+                          "value": "settled",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        }
+                      ],
+                      "delay": 0.055,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "a-readout"
+                      },
+                      "property": "transform.scale",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.34,
+                          "value": {
+                            "x": 1.09,
+                            "y": 1.09
+                          },
+                          "easing": "backOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.92,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.055,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.position",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": {
+                            "x": 43.88571428571428,
+                            "y": 0.0
+                          },
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.zoom",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 1.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": 1.055,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 1.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    }
+                  ]
+                }
+              ],
+              "effects": []
+            }
+          }
+        ],
+        "timeline": {
+          "items": [],
+          "effects": []
+        },
+        "interactions": [
+          {
+            "id": "program-r",
+            "type": "slider",
+            "label": "半径 r",
+            "target_property": "circular-motion-program.r",
+            "min": 1.0,
+            "max": 4.0,
+            "default": 2.5,
+            "step": 0.1,
+            "unit": "",
+            "action": null
+          },
+          {
+            "id": "program-omega",
+            "type": "slider",
+            "label": "角速度 ω",
+            "target_property": "circular-motion-program.omega",
+            "min": 0.3,
+            "max": 1.5,
+            "default": 0.8,
+            "step": 0.1,
+            "unit": "",
+            "action": null
+          }
+        ],
+        "legacy": {
+          "id": "circular-motion",
+          "mechanism": {
+            "kind": "composition",
+            "goal": "观察圆周运动的速度与加速度方向，并调节半径和角速度",
+            "observable_change": "质点沿圆周运动，速度保持切向，加速度始终指向圆心；调节滑杆可改变半径和角速度，观察矢量变化",
+            "example_label": "教学示例 · 非实测参数",
+            "source_refs": [
+              "source-65ecf18d-section-8853c7e6cb-block-3",
+              "source-65ecf18d-section-8853c7e6cb-block-4",
+              "source-65ecf18d-section-a3c372833d-block-3",
+              "source-65ecf18d-section-094a29c50d-block-6",
+              "source-65ecf18d-section-24ab0f890c-block-5"
+            ],
+            "nodes": [
+              {
+                "id": "r",
+                "op": "parameter",
+                "args": [],
+                "value": 2.5,
+                "label": "半径 r",
+                "min": 1.0,
+                "max": 4.0,
+                "step": 0.1
+              },
+              {
+                "id": "omega",
+                "op": "parameter",
+                "args": [],
+                "value": 0.8,
+                "label": "角速度 ω",
+                "min": 0.3,
+                "max": 1.5,
+                "step": 0.1
+              },
+              {
+                "id": "t",
+                "op": "time",
+                "args": [],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "theta",
+                "op": "multiply",
+                "args": [
+                  "omega",
+                  "t"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "c",
+                "op": "cos",
+                "args": [
+                  "theta"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "s",
+                "op": "sin",
+                "args": [
+                  "theta"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "unit-r",
+                "op": "vector",
+                "args": [
+                  "c",
+                  "s"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "position",
+                "op": "multiply",
+                "args": [
+                  "r",
+                  "unit-r"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "neg1",
+                "op": "constant",
+                "args": [],
+                "value": -1.0,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "neg-s",
+                "op": "multiply",
+                "args": [
+                  "neg1",
+                  "s"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "tangent",
+                "op": "vector",
+                "args": [
+                  "neg-s",
+                  "c"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "v-mag",
+                "op": "multiply",
+                "args": [
+                  "r",
+                  "omega"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "velocity",
+                "op": "multiply",
+                "args": [
+                  "v-mag",
+                  "tangent"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "omega2",
+                "op": "multiply",
+                "args": [
+                  "omega",
+                  "omega"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "a-mag",
+                "op": "multiply",
+                "args": [
+                  "r",
+                  "omega2"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "neg-a",
+                "op": "multiply",
+                "args": [
+                  "neg1",
+                  "a-mag"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "acceleration",
+                "op": "multiply",
+                "args": [
+                  "neg-a",
+                  "unit-r"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "zero",
+                "op": "constant",
+                "args": [],
+                "value": 0.0,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "origin",
+                "op": "vector",
+                "args": [
+                  "zero",
+                  "zero"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              }
+            ],
+            "visuals": [
+              {
+                "id": "orbit-circle",
+                "kind": "circle",
+                "data": "r",
+                "radius": 0.15,
+                "mass": 1.0,
+                "glow": false,
+                "origin": null,
+                "active_index": null,
+                "reveal_count": null,
+                "label": "圆形轨道",
+                "labels": [],
+                "color": "blue",
+                "source_refs": [
+                  "source-65ecf18d-section-a3c372833d-block-3"
+                ],
+                "sample_range": [
+                  -3.0,
+                  3.0
+                ],
+                "trail_seconds": 2.0
+              },
+              {
+                "id": "particle",
+                "kind": "ball",
+                "data": "position",
+                "radius": 0.2,
+                "mass": 1.0,
+                "glow": true,
+                "origin": null,
+                "active_index": null,
+                "reveal_count": null,
+                "label": "质点",
+                "labels": [],
+                "color": "teal",
+                "source_refs": [
+                  "source-65ecf18d-section-8853c7e6cb-block-3"
+                ],
+                "sample_range": [
+                  -3.0,
+                  3.0
+                ],
+                "trail_seconds": 2.0
+              },
+              {
+                "id": "v-arrow",
+                "kind": "vector_arrow",
+                "data": "velocity",
+                "radius": 0.15,
+                "mass": 1.0,
+                "glow": false,
+                "origin": "position",
+                "active_index": null,
+                "reveal_count": null,
+                "label": "速度 v（切向）",
+                "labels": [],
+                "color": "gold",
+                "source_refs": [
+                  "source-65ecf18d-section-8853c7e6cb-block-4"
+                ],
+                "sample_range": [
+                  -3.0,
+                  3.0
+                ],
+                "trail_seconds": 2.0
+              },
+              {
+                "id": "a-arrow",
+                "kind": "vector_arrow",
+                "data": "acceleration",
+                "radius": 0.15,
+                "mass": 1.0,
+                "glow": false,
+                "origin": "position",
+                "active_index": null,
+                "reveal_count": null,
+                "label": "加速度 a（向心）",
+                "labels": [],
+                "color": "red",
+                "source_refs": [
+                  "source-65ecf18d-section-8853c7e6cb-block-3",
+                  "source-65ecf18d-section-a3c372833d-block-3"
+                ],
+                "sample_range": [
+                  -3.0,
+                  3.0
+                ],
+                "trail_seconds": 2.0
+              },
+              {
+                "id": "v-readout",
+                "kind": "readout",
+                "data": "v-mag",
+                "radius": 0.15,
+                "mass": 1.0,
+                "glow": false,
+                "origin": null,
+                "active_index": null,
+                "reveal_count": null,
+                "label": "v = ωr",
+                "labels": [],
+                "color": "gold",
+                "source_refs": [
+                  "source-65ecf18d-section-094a29c50d-block-6"
+                ],
+                "sample_range": [
+                  -3.0,
+                  3.0
+                ],
+                "trail_seconds": 2.0
+              },
+              {
+                "id": "a-readout",
+                "kind": "readout",
+                "data": "a-mag",
+                "radius": 0.15,
+                "mass": 1.0,
+                "glow": false,
+                "origin": null,
+                "active_index": null,
+                "reveal_count": null,
+                "label": "a = ω²r",
+                "labels": [],
+                "color": "red",
+                "source_refs": [
+                  "source-65ecf18d-section-24ab0f890c-block-5"
+                ],
+                "sample_range": [
+                  -3.0,
+                  3.0
+                ],
+                "trail_seconds": 2.0
+              }
+            ],
+            "phases": [
+              {
+                "focus": [
+                  "particle",
+                  "v-arrow"
+                ],
+                "visible": [
+                  "orbit-circle",
+                  "particle",
+                  "v-arrow",
+                  "a-arrow",
+                  "v-readout",
+                  "a-readout"
+                ]
+              },
+              {
+                "focus": [
+                  "particle",
+                  "a-arrow"
+                ],
+                "visible": [
+                  "orbit-circle",
+                  "particle",
+                  "v-arrow",
+                  "a-arrow",
+                  "v-readout",
+                  "a-readout"
+                ]
+              },
+              {
+                "focus": [
+                  "v-readout",
+                  "a-readout"
+                ],
+                "visible": [
+                  "orbit-circle",
+                  "particle",
+                  "v-arrow",
+                  "a-arrow",
+                  "v-readout",
+                  "a-readout"
+                ]
+              }
+            ],
+            "x_range": [
+              -5.0,
+              5.0
+            ],
+            "y_range": [
+              -4.0,
+              4.0
+            ]
+          },
+          "title": "",
+          "teaching_goal": "观察速度切向、加速度指向圆心",
+          "learning_question": "匀速圆周运动中速度与加速度的方向关系是什么？",
+          "visual_pattern": "spatial_relation",
+          "claims": [
+            {
+              "id": "claim-velocity-tangent",
+              "text": "匀速圆周运动的速度方向始终沿轨迹切线，与半径垂直。",
+              "source_refs": [
+                "source-65ecf18d-section-8853c7e6cb-block-3",
+                "source-65ecf18d-section-8853c7e6cb-block-4"
+              ]
+            },
+            {
+              "id": "claim-acceleration-center",
+              "text": "向心加速度方向始终指向圆心，反映速度方向改变的快慢。",
+              "source_refs": [
+                "source-65ecf18d-section-8853c7e6cb-block-3",
+                "source-65ecf18d-section-a3c372833d-block-3"
+              ]
+            },
+            {
+              "id": "claim-omega-constant",
+              "text": "匀速圆周运动的角速度大小不变，线速度大小不变但方向时刻改变。",
+              "source_refs": [
+                "source-65ecf18d-section-a3c372833d-block-3"
+              ]
+            },
+            {
+              "id": "claim-formulas",
+              "text": "线速度 v=ωr，向心加速度 a=v²/r=ω²r，大小与半径和角速度相关。",
+              "source_refs": [
+                "source-65ecf18d-section-094a29c50d-block-6",
+                "source-65ecf18d-section-24ab0f890c-block-5"
+              ]
+            }
+          ],
+          "preset": "chain",
+          "attachment": {},
+          "thresholds": {},
+          "elements": [
+            {
+              "id": "orbit-circle",
+              "role": "node",
+              "label": "圆形轨道",
+              "x": 137.14285714285714,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            },
+            {
+              "id": "particle",
+              "role": "node",
+              "label": "质点",
+              "x": 274.2857142857143,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            },
+            {
+              "id": "v-arrow",
+              "role": "node",
+              "label": "速度 v（切向）",
+              "x": 411.42857142857144,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            },
+            {
+              "id": "a-arrow",
+              "role": "node",
+              "label": "加速度 a（向心）",
+              "x": 548.5714285714286,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            },
+            {
+              "id": "v-readout",
+              "role": "node",
+              "label": "v = ωr",
+              "x": 685.7142857142857,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            },
+            {
+              "id": "a-readout",
+              "role": "node",
+              "label": "a = ω²r",
+              "x": 822.8571428571429,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          ],
+          "steps": [
+            {
+              "id": "step-velocity",
+              "title": "切向速度",
+              "narration": "观察质点运动时，金色速度箭头始终与圆轨道相切，方向随位置变化而转动，大小由半径和角速度决定。",
+              "highlights": [
+                "particle",
+                "v-arrow"
+              ],
+              "states": {},
+              "source_refs": [
+                "source-65ecf18d-section-8853c7e6cb-block-4"
+              ]
+            },
+            {
+              "id": "step-acceleration",
+              "title": "向心加速度",
+              "narration": "观察红色加速度箭头始终指向圆心，与速度方向垂直，只改变速度方向而不改变速度大小。",
+              "highlights": [
+                "particle",
+                "a-arrow"
+              ],
+              "states": {},
+              "source_refs": [
+                "source-65ecf18d-section-8853c7e6cb-block-3",
+                "source-65ecf18d-section-a3c372833d-block-3"
+              ]
+            },
+            {
+              "id": "step-interactive",
+              "title": "调节观察",
+              "narration": "拖动半径和角速度滑杆，观察速度大小和加速度大小如何变化，验证公式 v=ωr 和 a=ω²r。",
+              "highlights": [
+                "v-readout",
+                "a-readout"
+              ],
+              "states": {},
+              "source_refs": [
+                "source-65ecf18d-section-094a29c50d-block-6",
+                "source-65ecf18d-section-24ab0f890c-block-5"
+              ]
+            }
+          ],
+          "controls": [
+            {
+              "id": "program-r",
+              "type": "slider",
+              "label": "半径 r",
+              "target_property": "circular-motion-program.r",
+              "min": 1.0,
+              "max": 4.0,
+              "default": 2.5,
+              "step": 0.1,
+              "unit": "",
+              "action": null
+            },
+            {
+              "id": "program-omega",
+              "type": "slider",
+              "label": "角速度 ω",
+              "target_property": "circular-motion-program.omega",
+              "min": 0.3,
+              "max": 1.5,
+              "default": 0.8,
+              "step": 0.1,
+              "unit": "",
+              "action": null
+            }
+          ],
+          "params": {}
+        }
+      }
+    ]
+  }
+}

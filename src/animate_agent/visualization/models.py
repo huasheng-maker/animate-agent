@@ -42,9 +42,15 @@ class EvidencePack(_Model):
     title: str
     sources: list[EvidenceSource] = Field(default_factory=list)
     items: list[EvidenceItem] = Field(min_length=1)
+    coverage_gaps: list[str] = Field(default_factory=list)
 
     @classmethod
     def from_document(cls, document: DocumentIR) -> EvidencePack:
+        gaps: set[str] = set()
+        for source in document.sources:
+            hints = source.metadata.get("evidence_gaps")
+            if isinstance(hints, list):
+                gaps.update(hint for hint in hints if isinstance(hint, str))
         items = [
             EvidenceItem(
                 id=block.id,
@@ -65,4 +71,5 @@ class EvidencePack(_Model):
                 for source in document.sources
             ],
             items=items,
+            coverage_gaps=sorted(gaps),
         )

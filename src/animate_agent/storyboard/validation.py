@@ -15,9 +15,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from animate_agent.composition_math import preflight_program
 from animate_agent.documents.models import DocumentIR
 from animate_agent.knowledge.models import LessonIR
-from animate_agent.mechanisms import required_mechanism
 from animate_agent.rendering.registry import (
     BUTTON_ACTIONS,
     CONSUMABLE_PROPS,
@@ -46,6 +46,7 @@ class StoryboardLimits:
     require_visual_objects: bool = True
     require_interactive_demo: bool = True
     allowed_renderers: tuple[str, ...] = ()
+    require_composition: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,6 +129,13 @@ def validate_storyboard(
         _check_ids(scene, where, issues)
         acceptable_refs = _acceptable_refs(scene, lesson, ref_ids)
         if scene.mechanism is not None:
+            if scene.mechanism.kind == "composition":
+                try:
+                    preflight_program(scene.mechanism)
+                except ValueError as exc:
+                    issues.append(ValidationIssue(
+                        "composition_numeric", f"{where}.mechanism", str(exc),
+                    ))
             carried = {ref for obj in scene.objects for ref in obj.source_refs}
             for ref in scene.mechanism.source_refs:
                 if ref not in carried or (
@@ -149,24 +157,14 @@ def validate_storyboard(
         _check_coverage(storyboard, lesson, covered_lesson_ids, issues)
     _check_demo_presence(storyboard, limits, issues)
 
-    focus = storyboard.learning_intent or storyboard.title
-    expected = required_mechanism(focus)
-    matching = [s.mechanism for s in storyboard.scenes
-                if s.mechanism is not None and s.mechanism.kind == expected]
-    if expected and not matching:
-        issues.append(ValidationIssue(
-            "mechanism_required", "scenes",
-            f"问题涉及已支持的计算机制 `{expected}`；至少一幕必须使用对应 mechanism，"
-            "不能仅用通用框线替代。请按能力目录生成并绑定步骤和真实证据。",
-        ))
-    if (
-        expected == "packet_network"
-        and re.search(r"三次握手|tcp\s+handshake", focus, re.I)
-        and not any(p.kind == "packet_network" and p.protocol == "tcp_handshake" for p in matching)
-    ):
-        issues.append(ValidationIssue(
-            "mechanism_protocol", "scenes", "三次握手必须使用 protocol=tcp_handshake",
-        ))
+    if limits.require_composition:
+        for i, scene in enumerate(storyboard.scenes):
+            if scene.mechanism is None or scene.mechanism.kind != "composition":
+                issues.append(ValidationIssue(
+                    "composition_required", f"scenes[{i}].mechanism",
+                    "生成模式要求可组合解释计划：mechanism.kind=composition。"
+                    "请按用户意图组合计算节点和视觉工具，不能仅输出框线或固定主题模板。",
+                ))
 
     return issues
 
@@ -829,6 +827,8 @@ def _check_controls(
 
 def _check_orphans(scene: StoryboardScene, where: str, issues: list[ValidationIssue]) -> None:
     referenced: set[str] = set()
+    if scene.mechanism is not None and scene.mechanism.kind == "composition":
+        referenced.update(view for phase in scene.mechanism.phases for view in phase.visible)
     for step in scene.steps:
         referenced.update(step.highlights)
         referenced.update(step.object_states)

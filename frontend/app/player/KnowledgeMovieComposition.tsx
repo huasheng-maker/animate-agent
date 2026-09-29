@@ -12,6 +12,7 @@ import { drawMechanism } from "../../player/mechanisms/draw.js";
 import { registerGsap } from "../../player/gsap-easing.js";
 import { createCompositionStage, readTheme } from "../../player/stage.js";
 import type { BeatEntry, BeatSeries, RenderSpec } from "./types";
+import { ComposableStage } from "./ComposableStage";
 
 registerGsap(gsap);
 
@@ -53,6 +54,7 @@ function CanvasBeat({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const program = entry.scene.mechanism ?? entry.renderScene.mechanism;
   const drawingRef = useRef<{
     canvas: HTMLCanvasElement;
     viewport: ReturnType<typeof createCompositionStage>;
@@ -138,28 +140,37 @@ function CanvasBeat({
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#050507" }}>
-      <canvas
+      {program?.kind === "composition" ? <ComposableStage
+        plan={program} sceneId={entry.renderScene.id} beatIndex={entry.beatIndex}
+        time={(entry.scene.beats.slice(0, entry.beatIndex).reduce(
+          (sum: number, beat: any) => sum + beat.durationInFrames, 0,
+        ) + frame) / fps}
+        progress={frame / Math.max(1, entry.durationInFrames - 1)}
+        width={spec.stage.width} height={spec.stage.height} overrides={overrides}
+      /> : <canvas
         ref={canvasRef}
         aria-label={entry.renderScene.title || entry.beat.title}
         style={{ width: "100%", height: "100%", display: "block" }}
-      />
+      />}
       <div
         style={{
           position: "absolute",
           right: 24,
-          bottom: 22,
+          bottom: program?.kind === "composition" ? 54 : 22,
           left: 24,
-          padding: "18px 22px",
+          padding: "12px 18px",
+          height: program?.kind === "composition" ? 130 : undefined,
+          overflow: "auto",
           color: "#f4f7ee",
           background: "linear-gradient(90deg, rgba(5,5,7,.94), rgba(5,5,7,.72))",
-          borderLeft: "3px solid #ccff00",
+          borderLeft: "3px solid #8addcc",
           fontFamily: "Inter, system-ui, sans-serif",
         }}
       >
-        <div style={{ marginBottom: 6, color: "#ccff00", fontSize: 18, fontWeight: 800 }}>
+        <div style={{ marginBottom: 6, color: "#8addcc", fontSize: 16, fontWeight: 700 }}>
           {String(entry.index + 1).padStart(2, "0")} · {entry.beat.title}
         </div>
-        <div style={{ fontSize: 24, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{caption.text}</div>
+        <div style={{ fontSize: 20, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{caption.text}</div>
       </div>
     </AbsoluteFill>
   );

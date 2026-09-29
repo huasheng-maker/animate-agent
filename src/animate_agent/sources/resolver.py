@@ -28,7 +28,7 @@ from animate_agent.sources.models import (
     TextSourceInput,
     UrlSourceInput,
 )
-from animate_agent.sources.search_focus import focus_search_results
+from animate_agent.sources.research import research_query
 
 SOURCE_INPUT_ADAPTER: TypeAdapter[SourceInput] = TypeAdapter(SourceInput)
 
@@ -70,8 +70,7 @@ class SourceResolver:
     async def resolve(self, source: SourceInput | Mapping[str, Any]) -> list[SourceDocument]:
         validated = SOURCE_INPUT_ADAPTER.validate_python(source)
         if isinstance(validated, QuerySourceInput):
-            documents = await self._web_search.resolve(validated)
-            return focus_search_results(documents, validated.query)
+            return await research_query(validated, self._web_search, self._web_reader)
         if isinstance(validated, UrlSourceInput):
             return await self._web_reader.resolve(validated)
         if isinstance(validated, TextSourceInput):

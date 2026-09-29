@@ -7,12 +7,14 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test:player": "node --test player/composition.test.mjs player/animation-ir.test.mjs player/timeline.test.mjs player/runtime.test.mjs player/behaviors.test.mjs player/canvas2d-renderer.test.mjs player/lidar/model.test.mjs player/lidar/scene.test.mjs player/mechanisms/model.test.mjs"
+    "test:player": "node --test player/composition.test.mjs player/animation-ir.test.mjs player/timeline.test.mjs player/runtime.test.mjs player/behaviors.test.mjs player/canvas2d-renderer.test.mjs player/lidar/model.test.mjs player/lidar/scene.test.mjs player/mechanisms/model.test.mjs player/composable/ElementRegistry.test.mjs"
   },
   "dependencies": {
     "@remotion/captions": "4.0.506",
     "@remotion/player": "4.0.506",
     "gsap": "^3.15.0",
+    "jsxgraph": "1.13.3",
+    "mathjs": "15.2.0",
     "next": "^15.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

@@ -1,0 +1,20 @@
+{
+  "circular-motion": {
+    "run_id": "a09e69a85b1e49ed87570a60ffffcce6",
+    "model": "kimi-k2.6",
+    "query": "用动画解释匀速圆周运动中速度与加速度的方向，并让我改变半径和角速度观察变化。",
+    "review_adjustments": [],
+    "source_artifacts": "Local data/runs/<run_id>; not needed to play the bundled demo."
+  },
+  "llm": {
+    "run_id": "ab4a96bab8614428a2a1a6a4bc9d0532",
+    "model": "kimi-k2.6",
+    "query": "How does an LLM work? 请用中文动画解释输入 token 如何变成向量，以及模型怎样预测下一个 token 并继续生成。",
+    "review_adjustments": [
+      "Correct the input-state visual to bind to input-state, not the predicted token.",
+      "Explain that the score table isolates softmax and does not implement Attention/FFN.",
+      "Label the feedback example as a first-order model, not a full-context Transformer."
+    ],
+    "source_artifacts": "Local data/runs/<run_id>; not needed to play the bundled demo."
+  }
+}

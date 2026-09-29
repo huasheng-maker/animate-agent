@@ -1,0 +1,27 @@
+.shell { width: 100%; min-height: 100vh; margin: 0; padding: 0 5vw 48px; color: #e6edf1; background: #0b1820; font-family: system-ui, sans-serif; }
+.nav { display: flex; justify-content: space-between; gap: 20px; padding: 25px 0; border-bottom: 1px solid #24363e; font-size: 12px; letter-spacing: .08em; }
+.nav a, .bottom a { color: #8addcc; text-decoration: none; }
+.nav span { color: #93a9b4; }
+.header { max-width: 960px; margin: 0; padding: 62px 0 48px; }
+.kicker { color: #8addcc; font-size: 12px; letter-spacing: .18em; }
+.header h1 { color: #f0f5f4; font-size: clamp(38px, 5.5vw, 70px); line-height: 1.2; letter-spacing: -.04em; margin: 18px 0; }
+.header em { color: #8addcc; font-style: normal; }
+.header > p:last-child { color: #a2b6c1; font-size: 16px; line-height: 1.9; }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+.card { display: block; overflow: hidden; border: 1px solid #29414b; border-radius: 16px; color: inherit; background: #10232d; text-decoration: none; }
+.card:hover, .card:focus-visible { border-color: #8addcc; outline-offset: 4px; }
+.preview { position: relative; aspect-ratio: 16/10; background: #071219; overflow: hidden; border-bottom: 1px solid #29414b; }
+.preview img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.number { position: absolute; top: 14px; left: 14px; padding: 7px 9px; background: #0b1820ed; border: 1px solid #43616b; border-radius: 5px; font-size: 12px; }
+.content { padding: 23px; }
+.category { color: #8addcc; font-size: 12px; margin: 0 0 13px; }
+.content h2 { font-size: 22px; line-height: 1.5; margin: 0; }
+.description { min-height: 80px; color: #a7bbc5; line-height: 1.8; font-size: 14px; }
+.concepts { display: flex; flex-wrap: wrap; gap: 7px; margin: 20px 0; }
+.concepts span { border: 1px solid #355361; border-radius: 5px; padding: 5px 8px; font-size: 11px; color: #c5d5dc; }
+.footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 18px; border-top: 1px solid #29414b; }
+.footer small { color: #8aa4b0; font-size: 10px; }
+.footer strong { color: #a9e7d9; font-size: 13px; }
+.bottom { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; color: #7895a2; margin-top: 34px; font-size: 12px; line-height: 1.8; }
+@media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } .card { display: grid; grid-template-columns: 40% 1fr; } .preview { aspect-ratio: auto; border-bottom: 0; } .description { min-height: 0; } }
+@media (max-width: 580px) { .card { display: block; } .preview { aspect-ratio: 16/10; } .header { padding: 36px 0; } .nav span { display: none; } }

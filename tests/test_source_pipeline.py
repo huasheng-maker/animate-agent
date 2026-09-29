@@ -91,7 +91,9 @@ def test_source_resolver_routes_query_url_and_text_deterministically() -> None:
         resolver.resolve({"type": "text", "text": "Local notes", "title": "Notes"})
     )
 
-    assert search.queries == ["Pydantic"]
+    assert len(search.queries) == 2  # One bounded supplement for definition-only evidence.
+    assert all(query.startswith("Pydantic\n") for query in search.queries)
+    assert "intermediate steps" in search.queries[0]
     assert reader.urls == ["https://example.com/guide"]
     assert query_documents[0].source_type == "web_search"
     assert url_documents[0].source_type == "web_page"

@@ -1,0 +1,5965 @@
+{
+  "spec_version": 1,
+  "storyboard_id": "storyboard-intent-97d1cec97388d5e2f4d1",
+  "lesson_id": "intent-97d1cec97388d5e2f4d1",
+  "document_id": "97d1cec97388d5e2f4d1",
+  "learning_intent": "How does an LLM work? 请用中文动画解释输入 token 如何变成向量，以及模型怎样预测下一个 token 并继续生成。",
+  "title": "LLM工作原理入门",
+  "subject": "人工智能",
+  "eyebrow": "大语言模型",
+  "stage": {
+    "width": 960.0,
+    "height": 600.0
+  },
+  "scenes": [
+    {
+      "id": "token-to-vector",
+      "mechanism": {
+        "kind": "composition",
+        "goal": "展示token查表变成向量的过程",
+        "observable_change": "滑动选择不同token编号，嵌入表高亮行和输出向量同步变化",
+        "example_label": "教学示例 · 非真实词表",
+        "source_refs": [
+          "source-ba1ab91d-section-2-1-block-1",
+          "source-ba1ab91d-section-2-1-block-2"
+        ],
+        "nodes": [
+          {
+            "id": "token-index",
+            "op": "parameter",
+            "args": [],
+            "value": 0.0,
+            "label": "token编号",
+            "min": 0.0,
+            "max": 3.0,
+            "step": 1.0
+          },
+          {
+            "id": "embed-table",
+            "op": "constant",
+            "args": [],
+            "value": [
+              [
+                0.2,
+                0.8,
+                -0.1
+              ],
+              [
+                0.7,
+                -0.3,
+                0.4
+              ],
+              [
+                -0.2,
+                0.5,
+                0.9
+              ],
+              [
+                0.1,
+                -0.6,
+                0.3
+              ]
+            ],
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "selected-vec",
+            "op": "row",
+            "args": [
+              "embed-table",
+              "token-index"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "token-id-vec",
+            "op": "vector",
+            "args": [
+              "token-index"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          }
+        ],
+        "visuals": [
+          {
+            "id": "input-token",
+            "kind": "tokens",
+            "data": "token-id-vec",
+            "radius": 0.15,
+            "mass": 1.0,
+            "glow": false,
+            "origin": null,
+            "active_index": null,
+            "reveal_count": null,
+            "label": "输入token",
+            "labels": [
+              "猫",
+              "狗",
+              "跑",
+              "跳"
+            ],
+            "color": "teal",
+            "source_refs": [
+              "source-ba1ab91d-section-2-1-block-1"
+            ],
+            "sample_range": [
+              -3.0,
+              3.0
+            ],
+            "trail_seconds": 2.0
+          },
+          {
+            "id": "embed-matrix",
+            "kind": "matrix",
+            "data": "embed-table",
+            "radius": 0.15,
+            "mass": 1.0,
+            "glow": false,
+            "origin": null,
+            "active_index": "token-index",
+            "reveal_count": null,
+            "label": "嵌入表",
+            "labels": [
+              "猫",
+              "狗",
+              "跑",
+              "跳"
+            ],
+            "color": "teal",
+            "source_refs": [
+              "source-ba1ab91d-section-2-1-block-2"
+            ],
+            "sample_range": [
+              -3.0,
+              3.0
+            ],
+            "trail_seconds": 2.0
+          },
+          {
+            "id": "output-vector",
+            "kind": "matrix",
+            "data": "selected-vec",
+            "radius": 0.15,
+            "mass": 1.0,
+            "glow": false,
+            "origin": null,
+            "active_index": null,
+            "reveal_count": null,
+            "label": "输出向量",
+            "labels": [],
+            "color": "teal",
+            "source_refs": [
+              "source-ba1ab91d-section-2-1-block-2"
+            ],
+            "sample_range": [
+              -3.0,
+              3.0
+            ],
+            "trail_seconds": 2.0
+          }
+        ],
+        "phases": [
+          {
+            "focus": [
+              "input-token",
+              "embed-matrix"
+            ],
+            "visible": [
+              "input-token",
+              "embed-matrix",
+              "output-vector"
+            ]
+          },
+          {
+            "focus": [
+              "embed-matrix",
+              "output-vector"
+            ],
+            "visible": [
+              "input-token",
+              "embed-matrix",
+              "output-vector"
+            ]
+          }
+        ],
+        "x_range": [
+          -4.0,
+          4.0
+        ],
+        "y_range": [
+          -3.0,
+          3.0
+        ]
+      },
+      "title": "",
+      "teaching_goal": "理解文本如何变成向量",
+      "learning_question": "输入的token是如何通过查表变成模型能计算的向量的？",
+      "visual_pattern": "state_transition",
+      "claims": [
+        {
+          "id": "tokenization-claim",
+          "text": "模型不能直接处理字符串，文本首先被切分为token，每个token对应词表中的一个整数编号。",
+          "source_refs": [
+            "source-ba1ab91d-section-2-1-block-1"
+          ]
+        },
+        {
+          "id": "embedding-claim",
+          "text": "模型通过嵌入表将离散token id映射为定长向量，这一步称为embedding。",
+          "source_refs": [
+            "source-ba1ab91d-section-2-1-block-2"
+          ]
+        }
+      ],
+      "preset": "chain",
+      "attachment": {},
+      "thresholds": {},
+      "elements": [
+        {
+          "id": "input-token",
+          "role": "node",
+          "label": "输入token",
+          "x": 240.0,
+          "y": 300.0,
+          "tone": "normal",
+          "props": {},
+          "binds": {},
+          "kind": "body",
+          "shape": "rect",
+          "width": 96.0,
+          "height": 48.0,
+          "sides": 6,
+          "inner_ratio": 1.0,
+          "heading": 0.0,
+          "glyph": null,
+          "path": [],
+          "duration": 0.0
+        },
+        {
+          "id": "embed-matrix",
+          "role": "node",
+          "label": "嵌入表",
+          "x": 480.0,
+          "y": 300.0,
+          "tone": "normal",
+          "props": {},
+          "binds": {},
+          "kind": "body",
+          "shape": "rect",
+          "width": 96.0,
+          "height": 48.0,
+          "sides": 6,
+          "inner_ratio": 1.0,
+          "heading": 0.0,
+          "glyph": null,
+          "path": [],
+          "duration": 0.0
+        },
+        {
+          "id": "output-vector",
+          "role": "node",
+          "label": "输出向量",
+          "x": 720.0,
+          "y": 300.0,
+          "tone": "normal",
+          "props": {},
+          "binds": {},
+          "kind": "body",
+          "shape": "rect",
+          "width": 96.0,
+          "height": 48.0,
+          "sides": 6,
+          "inner_ratio": 1.0,
+          "heading": 0.0,
+          "glyph": null,
+          "path": [],
+          "duration": 0.0
+        }
+      ],
+      "steps": [
+        {
+          "id": "step-token-input",
+          "title": "离散token",
+          "narration": "文本被切分为token，每个token对应词表中的一个整数编号。滑动参数切换不同token。",
+          "highlights": [
+            "input-token"
+          ],
+          "states": {},
+          "source_refs": [
+            "source-ba1ab91d-section-2-1-block-1"
+          ]
+        },
+        {
+          "id": "step-embed-lookup",
+          "title": "查表得向量",
+          "narration": "模型通过嵌入表查找，将token编号映射为固定长度的数值向量，成为可计算的数据。",
+          "highlights": [
+            "embed-matrix",
+            "output-vector"
+          ],
+          "states": {},
+          "source_refs": [
+            "source-ba1ab91d-section-2-1-block-2"
+          ]
+        }
+      ],
+      "controls": [
+        {
+          "id": "program-token-index",
+          "type": "slider",
+          "label": "token编号",
+          "target_property": "token-to-vector-program.token-index",
+          "min": 0.0,
+          "max": 3.0,
+          "default": 0.0,
+          "step": 1.0,
+          "unit": "",
+          "action": null
+        }
+      ],
+      "params": {}
+    },
+    {
+      "id": "predict-next",
+      "mechanism": {
+        "kind": "composition",
+        "goal": "用简化评分表观察 softmax 概率与贪心选择",
+        "observable_change": "调整输入状态观察输出概率分布和选中的token如何变化",
+        "example_label": "教学示例 · 非真实模型参数",
+        "source_refs": [
+          "source-ba1ab91d-section-2-4-llm-block-4",
+          "source-ba1ab91d-section-2-4-llm-block-5",
+          "source-ba1ab91d-section-2-3-ffn-block-6",
+          "source-47d4992f-section-overview-block-1",
+          "source-ba1ab91d-section-2-4-llm-block-6",
+          "source-ba1ab91d-section-2-4-llm-block-7"
+        ],
+        "nodes": [
+          {
+            "id": "input-state",
+            "op": "parameter",
+            "args": [],
+            "value": 0.0,
+            "label": "输入状态",
+            "min": 0.0,
+            "max": 2.0,
+            "step": 1.0
+          },
+          {
+            "id": "score-table",
+            "op": "constant",
+            "args": [],
+            "value": [
+              [
+                2.0,
+                0.5,
+                -1.0,
+                0.3
+              ],
+              [
+                0.1,
+                2.5,
+                0.8,
+                -0.5
+              ],
+              [
+                -0.3,
+                0.2,
+                1.5,
+                2.0
+              ]
+            ],
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "logits",
+            "op": "row",
+            "args": [
+              "score-table",
+              "input-state"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "probs",
+            "op": "softmax",
+            "args": [
+              "logits"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "chosen",
+            "op": "argmax",
+            "args": [
+              "probs"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "chosen-vec",
+            "op": "vector",
+            "args": [
+              "chosen"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          }
+        ],
+        "visuals": [
+          {
+            "id": "state-input",
+            "kind": "readout",
+            "data": "input-state",
+            "radius": 0.15,
+            "mass": 1.0,
+            "glow": false,
+            "origin": null,
+            "active_index": null,
+            "reveal_count": null,
+            "label": "当前输入状态编号",
+            "labels": [],
+            "color": "teal",
+            "source_refs": [
+              "source-ba1ab91d-section-2-4-llm-block-4",
+              "source-ba1ab91d-section-2-3-ffn-block-6"
+            ],
+            "sample_range": [
+              -3.0,
+              3.0
+            ],
+            "trail_seconds": 2.0
+          },
+          {
+            "id": "score-bars",
+            "kind": "bars",
+            "data": "logits",
+            "radius": 0.15,
+            "mass": 1.0,
+            "glow": false,
+            "origin": null,
+            "active_index": "chosen",
+            "reveal_count": null,
+            "label": "词表得分（logits）",
+            "labels": [
+              "猫",
+              "狗",
+              "跑",
+              "跳"
+            ],
+            "color": "blue",
+            "source_refs": [
+              "source-ba1ab91d-section-2-4-llm-block-5",
+              "source-ba1ab91d-section-2-3-ffn-block-6"
+            ],
+            "sample_range": [
+              -3.0,
+              3.0
+            ],
+            "trail_seconds": 2.0
+          },
+          {
+            "id": "prob-bars",
+            "kind": "bars",
+            "data": "probs",
+            "radius": 0.15,
+            "mass": 1.0,
+            "glow": false,
+            "origin": null,
+            "active_index": "chosen",
+            "reveal_count": null,
+            "label": "概率分布（softmax后）",
+            "labels": [
+              "猫",
+              "狗",
+              "跑",
+              "跳"
+            ],
+            "color": "teal",
+            "source_refs": [
+              "source-ba1ab91d-section-2-4-llm-block-5",
+              "source-ba1ab91d-section-2-4-llm-block-6"
+            ],
+            "sample_range": [
+              -3.0,
+              3.0
+            ],
+            "trail_seconds": 2.0
+          },
+          {
+            "id": "next-token",
+            "kind": "tokens",
+            "data": "chosen-vec",
+            "radius": 0.15,
+            "mass": 1.0,
+            "glow": false,
+            "origin": null,
+            "active_index": null,
+            "reveal_count": null,
+            "label": "选中的下一个token",
+            "labels": [
+              "猫",
+              "狗",
+              "跑",
+              "跳"
+            ],
+            "color": "gold",
+            "source_refs": [
+              "source-47d4992f-section-overview-block-1",
+              "source-ba1ab91d-section-2-4-llm-block-7"
+            ],
+            "sample_range": [
+              -3.0,
+              3.0
+            ],
+            "trail_seconds": 2.0
+          }
+        ],
+        "phases": [
+          {
+            "focus": [
+              "state-input",
+              "score-bars"
+            ],
+            "visible": [
+              "state-input",
+              "score-bars",
+              "prob-bars",
+              "next-token"
+            ]
+          },
+          {
+            "focus": [
+              "prob-bars",
+              "next-token"
+            ],
+            "visible": [
+              "state-input",
+              "score-bars",
+              "prob-bars",
+              "next-token"
+            ]
+          }
+        ],
+        "x_range": [
+          -5.0,
+          5.0
+        ],
+        "y_range": [
+          -4.0,
+          4.0
+        ]
+      },
+      "title": "",
+      "teaching_goal": "理解模型如何预测下一个token",
+      "learning_question": "模型拿到向量后，怎样计算出下一个token的概率分布？",
+      "visual_pattern": "system_process",
+      "claims": [
+        {
+          "id": "transformer-process-claim",
+          "text": "向量经过多层Attention和FFN处理，模型对整个词表打分，输出下一个位置的概率分布。",
+          "source_refs": [
+            "source-ba1ab91d-section-2-4-llm-block-4",
+            "source-ba1ab91d-section-2-4-llm-block-5",
+            "source-ba1ab91d-section-2-3-ffn-block-6"
+          ]
+        },
+        {
+          "id": "softmax-select-claim",
+          "text": "系统依据概率分布选取新token，将其追加到序列末尾，继续进行下一轮预测。",
+          "source_refs": [
+            "source-47d4992f-section-overview-block-1",
+            "source-ba1ab91d-section-2-4-llm-block-6",
+            "source-ba1ab91d-section-2-4-llm-block-7"
+          ]
+        }
+      ],
+      "preset": "chain",
+      "attachment": {},
+      "thresholds": {},
+      "elements": [
+        {
+          "id": "state-input",
+          "role": "node",
+          "label": "当前输入状态编号",
+          "x": 192.0,
+          "y": 300.0,
+          "tone": "normal",
+          "props": {},
+          "binds": {},
+          "kind": "body",
+          "shape": "rect",
+          "width": 96.0,
+          "height": 48.0,
+          "sides": 6,
+          "inner_ratio": 1.0,
+          "heading": 0.0,
+          "glyph": null,
+          "path": [],
+          "duration": 0.0
+        },
+        {
+          "id": "score-bars",
+          "role": "node",
+          "label": "词表得分（logits）",
+          "x": 384.0,
+          "y": 300.0,
+          "tone": "normal",
+          "props": {},
+          "binds": {},
+          "kind": "body",
+          "shape": "rect",
+          "width": 96.0,
+          "height": 48.0,
+          "sides": 6,
+          "inner_ratio": 1.0,
+          "heading": 0.0,
+          "glyph": null,
+          "path": [],
+          "duration": 0.0
+        },
+        {
+          "id": "prob-bars",
+          "role": "node",
+          "label": "概率分布（softmax后）",
+          "x": 576.0,
+          "y": 300.0,
+          "tone": "normal",
+          "props": {},
+          "binds": {},
+          "kind": "body",
+          "shape": "rect",
+          "width": 96.0,
+          "height": 48.0,
+          "sides": 6,
+          "inner_ratio": 1.0,
+          "heading": 0.0,
+          "glyph": null,
+          "path": [],
+          "duration": 0.0
+        },
+        {
+          "id": "next-token",
+          "role": "node",
+          "label": "选中的下一个token",
+          "x": 768.0,
+          "y": 300.0,
+          "tone": "normal",
+          "props": {},
+          "binds": {},
+          "kind": "body",
+          "shape": "rect",
+          "width": 96.0,
+          "height": 48.0,
+          "sides": 6,
+          "inner_ratio": 1.0,
+          "heading": 0.0,
+          "glyph": null,
+          "path": [],
+          "duration": 0.0
+        }
+      ],
+      "steps": [
+        {
+          "id": "step-score",
+          "title": "词表打分",
+          "narration": "真实模型通过 Attention 和 FFN 计算状态；这里用教学评分表代替这一过程，只观察不同状态的词表得分如何变成概率。",
+          "highlights": [
+            "score-bars"
+          ],
+          "states": {},
+          "source_refs": [
+            "source-ba1ab91d-section-2-4-llm-block-5",
+            "source-ba1ab91d-section-2-3-ffn-block-6"
+          ]
+        },
+        {
+          "id": "step-prob-select",
+          "title": "概率与选择",
+          "narration": "分数通过softmax转为概率，系统依据概率分布贪心选择概率最高的token作为输出。",
+          "highlights": [
+            "prob-bars",
+            "next-token"
+          ],
+          "states": {},
+          "source_refs": [
+            "source-47d4992f-section-overview-block-1",
+            "source-ba1ab91d-section-2-4-llm-block-7"
+          ]
+        }
+      ],
+      "controls": [
+        {
+          "id": "program-input-state",
+          "type": "slider",
+          "label": "输入状态",
+          "target_property": "predict-next-program.input-state",
+          "min": 0.0,
+          "max": 2.0,
+          "default": 0.0,
+          "step": 1.0,
+          "unit": "",
+          "action": null
+        }
+      ],
+      "params": {}
+    },
+    {
+      "id": "autoregressive-loop",
+      "mechanism": {
+        "kind": "composition",
+        "goal": "展示简化自回归循环：生成结果成为下一步输入",
+        "observable_change": "序列逐步增长，每轮用上轮输出作为新输入继续预测",
+        "example_label": "教学示例 · 一阶反馈，非完整 Transformer",
+        "source_refs": [
+          "source-47d4992f-section-overview-block-1",
+          "source-ba1ab91d-section-2-4-llm-block-7",
+          "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-2",
+          "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-3",
+          "source-ba1ab91d-section-3-3-decode-token-block-1"
+        ],
+        "nodes": [
+          {
+            "id": "seed-token",
+            "op": "parameter",
+            "args": [],
+            "value": 0.0,
+            "label": "起始token",
+            "min": 0.0,
+            "max": 2.0,
+            "step": 1.0
+          },
+          {
+            "id": "transition-mat",
+            "op": "constant",
+            "args": [],
+            "value": [
+              [
+                0.0,
+                2.0,
+                1.0
+              ],
+              [
+                2.0,
+                1.0,
+                0.0
+              ],
+              [
+                1.0,
+                0.0,
+                2.0
+              ]
+            ],
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "beat",
+            "op": "phase",
+            "args": [],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "one",
+            "op": "constant",
+            "args": [],
+            "value": 1.0,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "two",
+            "op": "constant",
+            "args": [],
+            "value": 2.0,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "reveal",
+            "op": "add",
+            "args": [
+              "beat",
+              "two"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "logits-0",
+            "op": "row",
+            "args": [
+              "transition-mat",
+              "seed-token"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "choice-0",
+            "op": "argmax",
+            "args": [
+              "logits-0"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "token-0",
+            "op": "vector",
+            "args": [
+              "choice-0"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "logits-1",
+            "op": "row",
+            "args": [
+              "transition-mat",
+              "choice-0"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "choice-1",
+            "op": "argmax",
+            "args": [
+              "logits-1"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "token-1",
+            "op": "vector",
+            "args": [
+              "choice-1"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "logits-2",
+            "op": "row",
+            "args": [
+              "transition-mat",
+              "choice-1"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "choice-2",
+            "op": "argmax",
+            "args": [
+              "logits-2"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "token-2",
+            "op": "vector",
+            "args": [
+              "choice-2"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "prefix",
+            "op": "vector",
+            "args": [
+              "seed-token"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "sequence",
+            "op": "concat",
+            "args": [
+              "prefix",
+              "token-0",
+              "token-1",
+              "token-2"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "probs-0",
+            "op": "softmax",
+            "args": [
+              "logits-0"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "probs-1",
+            "op": "softmax",
+            "args": [
+              "logits-1"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "probs-2",
+            "op": "softmax",
+            "args": [
+              "logits-2"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "all-probs",
+            "op": "stack",
+            "args": [
+              "probs-0",
+              "probs-1",
+              "probs-2"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "current-prob",
+            "op": "row",
+            "args": [
+              "all-probs",
+              "beat"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          },
+          {
+            "id": "current-winner",
+            "op": "argmax",
+            "args": [
+              "current-prob"
+            ],
+            "value": null,
+            "label": "",
+            "min": null,
+            "max": null,
+            "step": 0.1
+          }
+        ],
+        "visuals": [
+          {
+            "id": "history-seq",
+            "kind": "tokens",
+            "data": "sequence",
+            "radius": 0.15,
+            "mass": 1.0,
+            "glow": false,
+            "origin": null,
+            "active_index": null,
+            "reveal_count": "reveal",
+            "label": "生成序列（历史+新token）",
+            "labels": [
+              "猫",
+              "狗",
+              "跑"
+            ],
+            "color": "teal",
+            "source_refs": [
+              "source-47d4992f-section-overview-block-1",
+              "source-ba1ab91d-section-2-4-llm-block-7"
+            ],
+            "sample_range": [
+              -3.0,
+              3.0
+            ],
+            "trail_seconds": 2.0
+          },
+          {
+            "id": "current-dist",
+            "kind": "bars",
+            "data": "current-prob",
+            "radius": 0.15,
+            "mass": 1.0,
+            "glow": false,
+            "origin": null,
+            "active_index": "current-winner",
+            "reveal_count": null,
+            "label": "本轮预测概率",
+            "labels": [
+              "猫",
+              "狗",
+              "跑"
+            ],
+            "color": "teal",
+            "source_refs": [
+              "source-ba1ab91d-section-3-3-decode-token-block-1",
+              "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-2",
+              "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-3"
+            ],
+            "sample_range": [
+              -3.0,
+              3.0
+            ],
+            "trail_seconds": 2.0
+          }
+        ],
+        "phases": [
+          {
+            "focus": [
+              "history-seq"
+            ],
+            "visible": [
+              "history-seq",
+              "current-dist"
+            ]
+          },
+          {
+            "focus": [
+              "current-dist"
+            ],
+            "visible": [
+              "history-seq",
+              "current-dist"
+            ]
+          },
+          {
+            "focus": [
+              "history-seq"
+            ],
+            "visible": [
+              "history-seq",
+              "current-dist"
+            ]
+          }
+        ],
+        "x_range": [
+          -5.0,
+          5.0
+        ],
+        "y_range": [
+          -4.0,
+          4.0
+        ]
+      },
+      "title": "",
+      "teaching_goal": "理解自回归生成循环",
+      "learning_question": "模型如何把预测出的token反馈回去，继续生成下一个？",
+      "visual_pattern": "flow",
+      "claims": [
+        {
+          "id": "feedback-loop-claim",
+          "text": "LLM将预测出的token拼接到prompt后面，再预测下一个，如此重复形成自回归生成。",
+          "source_refs": [
+            "source-47d4992f-section-overview-block-1",
+            "source-ba1ab91d-section-2-4-llm-block-7"
+          ]
+        },
+        {
+          "id": "prefill-decode-claim",
+          "text": "Prefill阶段并行处理输入token建立缓存，Decode阶段每次只生成一个新token并依赖历史状态。",
+          "source_refs": [
+            "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-2",
+            "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-3",
+            "source-ba1ab91d-section-3-3-decode-token-block-1"
+          ]
+        }
+      ],
+      "preset": "chain",
+      "attachment": {},
+      "thresholds": {},
+      "elements": [
+        {
+          "id": "history-seq",
+          "role": "node",
+          "label": "生成序列（历史+新token）",
+          "x": 320.0,
+          "y": 300.0,
+          "tone": "normal",
+          "props": {},
+          "binds": {},
+          "kind": "body",
+          "shape": "rect",
+          "width": 96.0,
+          "height": 48.0,
+          "sides": 6,
+          "inner_ratio": 1.0,
+          "heading": 0.0,
+          "glyph": null,
+          "path": [],
+          "duration": 0.0
+        },
+        {
+          "id": "current-dist",
+          "role": "node",
+          "label": "本轮预测概率",
+          "x": 640.0,
+          "y": 300.0,
+          "tone": "normal",
+          "props": {},
+          "binds": {},
+          "kind": "body",
+          "shape": "rect",
+          "width": 96.0,
+          "height": 48.0,
+          "sides": 6,
+          "inner_ratio": 1.0,
+          "heading": 0.0,
+          "glyph": null,
+          "path": [],
+          "duration": 0.0
+        }
+      ],
+      "steps": [
+        {
+          "id": "step-prefill",
+          "title": "初始输入",
+          "narration": "给定起始token，模型开始第一轮预测，输出第一个新token并追加到序列。",
+          "highlights": [
+            "history-seq"
+          ],
+          "states": {},
+          "source_refs": [
+            "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-2"
+          ]
+        },
+        {
+          "id": "step-decode-1",
+          "title": "第二轮预测",
+          "narration": "模型根据当前序列状态预测概率分布，选择下一个token，生成结果成为下一步的输入。",
+          "highlights": [
+            "current-dist",
+            "history-seq"
+          ],
+          "states": {},
+          "source_refs": [
+            "source-47d4992f-section-overview-block-1",
+            "source-ba1ab91d-section-2-4-llm-block-7"
+          ]
+        },
+        {
+          "id": "step-decode-2",
+          "title": "循环继续",
+          "narration": "上一轮算出的 token 成为下一轮输入，序列继续增长。此简化模型只使用最后一个 token；真实 LLM 会利用可见上下文，而不是只看最后一个 token。",
+          "highlights": [
+            "history-seq"
+          ],
+          "states": {},
+          "source_refs": [
+            "source-ba1ab91d-section-3-3-decode-token-block-1",
+            "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-3"
+          ]
+        }
+      ],
+      "controls": [
+        {
+          "id": "program-seed-token",
+          "type": "slider",
+          "label": "起始token",
+          "target_property": "autoregressive-loop-program.seed-token",
+          "min": 0.0,
+          "max": 2.0,
+          "default": 0.0,
+          "step": 1.0,
+          "unit": "",
+          "action": null
+        }
+      ],
+      "params": {}
+    }
+  ],
+  "animation_ir": {
+    "irVersion": 1,
+    "fps": 60.0,
+    "stage": {
+      "width": 960.0,
+      "height": 600.0
+    },
+    "metadata": {
+      "storyboardId": "storyboard-intent-97d1cec97388d5e2f4d1",
+      "lessonId": "intent-97d1cec97388d5e2f4d1",
+      "documentId": "97d1cec97388d5e2f4d1",
+      "learningIntent": "How does an LLM work? 请用中文动画解释输入 token 如何变成向量，以及模型怎样预测下一个 token 并继续生成。",
+      "title": "LLM工作原理入门",
+      "subject": "人工智能",
+      "eyebrow": "大语言模型",
+      "sourceFormat": "storyboard-compiler-v1"
+    },
+    "citations": [
+      {
+        "id": "source-47d4992f-section-overview-block-1",
+        "title": "LLM输出一个token需要经历哪些步骤",
+        "locator": "LLM输出一个token需要经历哪些步骤",
+        "excerpt": "一个大型语言模型（LLM）本质上是一个预测下一个token的神经网络。就只预测一个token。然后它把这个token拼接到你的prompt后面，再预测下一个。如此重复。",
+        "url": "https://zhuanlan.zhihu.com/p/2036073544682100439"
+      },
+      {
+        "id": "source-ba1ab91d-section-2-1-block-1",
+        "title": "1 理解 LLM 推理生命周期 - USTC OS Docs",
+        "locator": "2.1 文本是如何变成机器可计算数据的 ¶",
+        "excerpt": "模型不能直接以字符串作为计算对象。对于机器而言，文本首先会被切分为若干 token ，每个 token 对应词表中的一个整数编号，即 token id 。",
+        "url": "http://home.ustc.edu.cn/~pzw2002/Homework/HW2/part1/llm-lifecycle.html"
+      },
+      {
+        "id": "source-ba1ab91d-section-2-1-block-2",
+        "title": "1 理解 LLM 推理生命周期 - USTC OS Docs",
+        "locator": "2.1 文本是如何变成机器可计算数据的 ¶",
+        "excerpt": "随后，模型通过嵌入表将这些离散编号映射为定长向量，这一步称为 embedding 。因此，Transformer 直接处理的并不是原始文本本身，而是：",
+        "url": "http://home.ustc.edu.cn/~pzw2002/Homework/HW2/part1/llm-lifecycle.html"
+      },
+      {
+        "id": "source-ba1ab91d-section-2-3-ffn-block-6",
+        "title": "1 理解 LLM 推理生命周期 - USTC OS Docs",
+        "locator": "2.3 FFN 层在做什么 ¶",
+        "excerpt": "因此， FFN 可以概括为：对当前位置的表示进行非线性特征变换。",
+        "url": "http://home.ustc.edu.cn/~pzw2002/Homework/HW2/part1/llm-lifecycle.html"
+      },
+      {
+        "id": "source-ba1ab91d-section-2-4-llm-block-5",
+        "title": "1 理解 LLM 推理生命周期 - USTC OS Docs",
+        "locator": "2.4 从整体上看，LLM 在做什么 ¶",
+        "excerpt": "对整个词表打分；",
+        "url": "http://home.ustc.edu.cn/~pzw2002/Homework/HW2/part1/llm-lifecycle.html"
+      },
+      {
+        "id": "source-ba1ab91d-section-2-4-llm-block-7",
+        "title": "1 理解 LLM 推理生命周期 - USTC OS Docs",
+        "locator": "2.4 从整体上看，LLM 在做什么 ¶",
+        "excerpt": "把这个 token 接到序列末尾，再继续下一轮。",
+        "url": "http://home.ustc.edu.cn/~pzw2002/Homework/HW2/part1/llm-lifecycle.html"
+      },
+      {
+        "id": "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-2",
+        "title": "1 理解 LLM 推理生命周期 - USTC OS Docs",
+        "locator": "3. LLM 推理的生命周期：Tokenization、Prefill 与 Decode ¶",
+        "excerpt": "Tokenization",
+        "url": "http://home.ustc.edu.cn/~pzw2002/Homework/HW2/part1/llm-lifecycle.html"
+      },
+      {
+        "id": "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-3",
+        "title": "1 理解 LLM 推理生命周期 - USTC OS Docs",
+        "locator": "3. LLM 推理的生命周期：Tokenization、Prefill 与 Decode ¶",
+        "excerpt": "Prefill",
+        "url": "http://home.ustc.edu.cn/~pzw2002/Homework/HW2/part1/llm-lifecycle.html"
+      },
+      {
+        "id": "source-ba1ab91d-section-3-3-decode-token-block-1",
+        "title": "1 理解 LLM 推理生命周期 - USTC OS Docs",
+        "locator": "3.3 Decode：每次只生成一个新 token ¶",
+        "excerpt": "根据请求的所有历史缓存，生成一个新的 token ；",
+        "url": "http://home.ustc.edu.cn/~pzw2002/Homework/HW2/part1/llm-lifecycle.html"
+      }
+    ],
+    "scenes": [
+      {
+        "id": "token-to-vector",
+        "mechanism": {
+          "kind": "composition",
+          "goal": "展示token查表变成向量的过程",
+          "observable_change": "滑动选择不同token编号，嵌入表高亮行和输出向量同步变化",
+          "example_label": "教学示例 · 非真实词表",
+          "source_refs": [
+            "source-ba1ab91d-section-2-1-block-1",
+            "source-ba1ab91d-section-2-1-block-2"
+          ],
+          "nodes": [
+            {
+              "id": "token-index",
+              "op": "parameter",
+              "args": [],
+              "value": 0.0,
+              "label": "token编号",
+              "min": 0.0,
+              "max": 3.0,
+              "step": 1.0
+            },
+            {
+              "id": "embed-table",
+              "op": "constant",
+              "args": [],
+              "value": [
+                [
+                  0.2,
+                  0.8,
+                  -0.1
+                ],
+                [
+                  0.7,
+                  -0.3,
+                  0.4
+                ],
+                [
+                  -0.2,
+                  0.5,
+                  0.9
+                ],
+                [
+                  0.1,
+                  -0.6,
+                  0.3
+                ]
+              ],
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "selected-vec",
+              "op": "row",
+              "args": [
+                "embed-table",
+                "token-index"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "token-id-vec",
+              "op": "vector",
+              "args": [
+                "token-index"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            }
+          ],
+          "visuals": [
+            {
+              "id": "input-token",
+              "kind": "tokens",
+              "data": "token-id-vec",
+              "radius": 0.15,
+              "mass": 1.0,
+              "glow": false,
+              "origin": null,
+              "active_index": null,
+              "reveal_count": null,
+              "label": "输入token",
+              "labels": [
+                "猫",
+                "狗",
+                "跑",
+                "跳"
+              ],
+              "color": "teal",
+              "source_refs": [
+                "source-ba1ab91d-section-2-1-block-1"
+              ],
+              "sample_range": [
+                -3.0,
+                3.0
+              ],
+              "trail_seconds": 2.0
+            },
+            {
+              "id": "embed-matrix",
+              "kind": "matrix",
+              "data": "embed-table",
+              "radius": 0.15,
+              "mass": 1.0,
+              "glow": false,
+              "origin": null,
+              "active_index": "token-index",
+              "reveal_count": null,
+              "label": "嵌入表",
+              "labels": [
+                "猫",
+                "狗",
+                "跑",
+                "跳"
+              ],
+              "color": "teal",
+              "source_refs": [
+                "source-ba1ab91d-section-2-1-block-2"
+              ],
+              "sample_range": [
+                -3.0,
+                3.0
+              ],
+              "trail_seconds": 2.0
+            },
+            {
+              "id": "output-vector",
+              "kind": "matrix",
+              "data": "selected-vec",
+              "radius": 0.15,
+              "mass": 1.0,
+              "glow": false,
+              "origin": null,
+              "active_index": null,
+              "reveal_count": null,
+              "label": "输出向量",
+              "labels": [],
+              "color": "teal",
+              "source_refs": [
+                "source-ba1ab91d-section-2-1-block-2"
+              ],
+              "sample_range": [
+                -3.0,
+                3.0
+              ],
+              "trail_seconds": 2.0
+            }
+          ],
+          "phases": [
+            {
+              "focus": [
+                "input-token",
+                "embed-matrix"
+              ],
+              "visible": [
+                "input-token",
+                "embed-matrix",
+                "output-vector"
+              ]
+            },
+            {
+              "focus": [
+                "embed-matrix",
+                "output-vector"
+              ],
+              "visible": [
+                "input-token",
+                "embed-matrix",
+                "output-vector"
+              ]
+            }
+          ],
+          "x_range": [
+            -4.0,
+            4.0
+          ],
+          "y_range": [
+            -3.0,
+            3.0
+          ]
+        },
+        "metadata": {
+          "title": "",
+          "teachingGoal": "理解文本如何变成向量",
+          "learningQuestion": "输入的token是如何通过查表变成模型能计算的向量的？",
+          "visualPattern": "state_transition",
+          "claims": [
+            {
+              "id": "tokenization-claim",
+              "text": "模型不能直接处理字符串，文本首先被切分为token，每个token对应词表中的一个整数编号。",
+              "source_refs": [
+                "source-ba1ab91d-section-2-1-block-1"
+              ]
+            },
+            {
+              "id": "embedding-claim",
+              "text": "模型通过嵌入表将离散token id映射为定长向量，这一步称为embedding。",
+              "source_refs": [
+                "source-ba1ab91d-section-2-1-block-2"
+              ]
+            }
+          ],
+          "preset": "chain"
+        },
+        "nodes": [
+          {
+            "id": "input-token",
+            "kind": "body",
+            "parentId": null,
+            "transform": {
+              "position": {
+                "x": 240.0,
+                "y": 300.0
+              },
+              "rotation": 0.0,
+              "scale": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "opacity": 1.0,
+              "pathProgress": 0.0
+            },
+            "style": {
+              "tone": "normal",
+              "highlight": false,
+              "glowIntensity": 0.0
+            },
+            "visual": {
+              "id": "input-token",
+              "role": "node",
+              "label": "输入token",
+              "x": 240.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0,
+              "originalText": "",
+              "visibleText": "",
+              "drawProgress": 1.0,
+              "trimStart": 0.0,
+              "trimEnd": 1.0,
+              "revealProgress": 1.0,
+              "cursorVisible": false
+            },
+            "semantic": {
+              "progress": 0.0,
+              "intensity": 0.0,
+              "phase": "idle"
+            },
+            "legacy": {
+              "id": "input-token",
+              "role": "node",
+              "label": "输入token",
+              "x": 240.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          },
+          {
+            "id": "embed-matrix",
+            "kind": "body",
+            "parentId": null,
+            "transform": {
+              "position": {
+                "x": 480.0,
+                "y": 300.0
+              },
+              "rotation": 0.0,
+              "scale": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "opacity": 1.0,
+              "pathProgress": 0.0
+            },
+            "style": {
+              "tone": "normal",
+              "highlight": false,
+              "glowIntensity": 0.0
+            },
+            "visual": {
+              "id": "embed-matrix",
+              "role": "node",
+              "label": "嵌入表",
+              "x": 480.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0,
+              "originalText": "",
+              "visibleText": "",
+              "drawProgress": 1.0,
+              "trimStart": 0.0,
+              "trimEnd": 1.0,
+              "revealProgress": 1.0,
+              "cursorVisible": false
+            },
+            "semantic": {
+              "progress": 0.0,
+              "intensity": 0.0,
+              "phase": "idle"
+            },
+            "legacy": {
+              "id": "embed-matrix",
+              "role": "node",
+              "label": "嵌入表",
+              "x": 480.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          },
+          {
+            "id": "output-vector",
+            "kind": "body",
+            "parentId": null,
+            "transform": {
+              "position": {
+                "x": 720.0,
+                "y": 300.0
+              },
+              "rotation": 0.0,
+              "scale": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "opacity": 1.0,
+              "pathProgress": 0.0
+            },
+            "style": {
+              "tone": "normal",
+              "highlight": false,
+              "glowIntensity": 0.0
+            },
+            "visual": {
+              "id": "output-vector",
+              "role": "node",
+              "label": "输出向量",
+              "x": 720.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0,
+              "originalText": "",
+              "visibleText": "",
+              "drawProgress": 1.0,
+              "trimStart": 0.0,
+              "trimEnd": 1.0,
+              "revealProgress": 1.0,
+              "cursorVisible": false
+            },
+            "semantic": {
+              "progress": 0.0,
+              "intensity": 0.0,
+              "phase": "idle"
+            },
+            "legacy": {
+              "id": "output-vector",
+              "role": "node",
+              "label": "输出向量",
+              "x": 720.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          }
+        ],
+        "camera": {
+          "id": "main",
+          "position": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "zoom": 1.0,
+          "rotation": 0.0
+        },
+        "beats": [
+          {
+            "id": "step-token-input",
+            "title": "离散token",
+            "narration": "文本被切分为token，每个token对应词表中的一个整数编号。滑动参数切换不同token。",
+            "sourceRefs": [
+              "source-ba1ab91d-section-2-1-block-1"
+            ],
+            "durationInFrames": 306,
+            "timeline": {
+              "items": [
+                {
+                  "type": "parallel",
+                  "delay": 0.0,
+                  "children": [
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "input-token"
+                      },
+                      "property": "style.glowIntensity",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 0.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.22,
+                          "value": 1.0,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.86,
+                          "value": 0.32,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 0.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "input-token"
+                      },
+                      "property": "semantic.phase",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": "entering",
+                          "easing": "linear",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 0.12,
+                          "value": "active",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 1.28,
+                          "value": "settled",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "input-token"
+                      },
+                      "property": "transform.scale",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.34,
+                          "value": {
+                            "x": 1.09,
+                            "y": 1.09
+                          },
+                          "easing": "backOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.92,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.position",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": {
+                            "x": -38.4,
+                            "y": 0.0
+                          },
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.zoom",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 1.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": 1.055,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 1.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    }
+                  ]
+                }
+              ],
+              "effects": []
+            }
+          },
+          {
+            "id": "step-embed-lookup",
+            "title": "查表得向量",
+            "narration": "模型通过嵌入表查找，将token编号映射为固定长度的数值向量，成为可计算的数据。",
+            "sourceRefs": [
+              "source-ba1ab91d-section-2-1-block-2"
+            ],
+            "durationInFrames": 296,
+            "timeline": {
+              "items": [
+                {
+                  "type": "parallel",
+                  "delay": 0.0,
+                  "children": [
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "embed-matrix"
+                      },
+                      "property": "style.glowIntensity",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 0.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.22,
+                          "value": 1.0,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.86,
+                          "value": 0.32,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 0.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "embed-matrix"
+                      },
+                      "property": "semantic.phase",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": "entering",
+                          "easing": "linear",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 0.12,
+                          "value": "active",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 1.28,
+                          "value": "settled",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "embed-matrix"
+                      },
+                      "property": "transform.scale",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.34,
+                          "value": {
+                            "x": 1.09,
+                            "y": 1.09
+                          },
+                          "easing": "backOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.92,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "output-vector"
+                      },
+                      "property": "style.glowIntensity",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 0.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.22,
+                          "value": 1.0,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.86,
+                          "value": 0.32,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 0.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.055,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "output-vector"
+                      },
+                      "property": "semantic.phase",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": "entering",
+                          "easing": "linear",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 0.12,
+                          "value": "active",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 1.28,
+                          "value": "settled",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        }
+                      ],
+                      "delay": 0.055,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "output-vector"
+                      },
+                      "property": "transform.scale",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.34,
+                          "value": {
+                            "x": 1.09,
+                            "y": 1.09
+                          },
+                          "easing": "backOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.92,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.055,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.position",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": {
+                            "x": 19.2,
+                            "y": 0.0
+                          },
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.zoom",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 1.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": 1.055,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 1.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    }
+                  ]
+                }
+              ],
+              "effects": []
+            }
+          }
+        ],
+        "timeline": {
+          "items": [],
+          "effects": []
+        },
+        "interactions": [
+          {
+            "id": "program-token-index",
+            "type": "slider",
+            "label": "token编号",
+            "target_property": "token-to-vector-program.token-index",
+            "min": 0.0,
+            "max": 3.0,
+            "default": 0.0,
+            "step": 1.0,
+            "unit": "",
+            "action": null
+          }
+        ],
+        "legacy": {
+          "id": "token-to-vector",
+          "mechanism": {
+            "kind": "composition",
+            "goal": "展示token查表变成向量的过程",
+            "observable_change": "滑动选择不同token编号，嵌入表高亮行和输出向量同步变化",
+            "example_label": "教学示例 · 非真实词表",
+            "source_refs": [
+              "source-ba1ab91d-section-2-1-block-1",
+              "source-ba1ab91d-section-2-1-block-2"
+            ],
+            "nodes": [
+              {
+                "id": "token-index",
+                "op": "parameter",
+                "args": [],
+                "value": 0.0,
+                "label": "token编号",
+                "min": 0.0,
+                "max": 3.0,
+                "step": 1.0
+              },
+              {
+                "id": "embed-table",
+                "op": "constant",
+                "args": [],
+                "value": [
+                  [
+                    0.2,
+                    0.8,
+                    -0.1
+                  ],
+                  [
+                    0.7,
+                    -0.3,
+                    0.4
+                  ],
+                  [
+                    -0.2,
+                    0.5,
+                    0.9
+                  ],
+                  [
+                    0.1,
+                    -0.6,
+                    0.3
+                  ]
+                ],
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "selected-vec",
+                "op": "row",
+                "args": [
+                  "embed-table",
+                  "token-index"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "token-id-vec",
+                "op": "vector",
+                "args": [
+                  "token-index"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              }
+            ],
+            "visuals": [
+              {
+                "id": "input-token",
+                "kind": "tokens",
+                "data": "token-id-vec",
+                "radius": 0.15,
+                "mass": 1.0,
+                "glow": false,
+                "origin": null,
+                "active_index": null,
+                "reveal_count": null,
+                "label": "输入token",
+                "labels": [
+                  "猫",
+                  "狗",
+                  "跑",
+                  "跳"
+                ],
+                "color": "teal",
+                "source_refs": [
+                  "source-ba1ab91d-section-2-1-block-1"
+                ],
+                "sample_range": [
+                  -3.0,
+                  3.0
+                ],
+                "trail_seconds": 2.0
+              },
+              {
+                "id": "embed-matrix",
+                "kind": "matrix",
+                "data": "embed-table",
+                "radius": 0.15,
+                "mass": 1.0,
+                "glow": false,
+                "origin": null,
+                "active_index": "token-index",
+                "reveal_count": null,
+                "label": "嵌入表",
+                "labels": [
+                  "猫",
+                  "狗",
+                  "跑",
+                  "跳"
+                ],
+                "color": "teal",
+                "source_refs": [
+                  "source-ba1ab91d-section-2-1-block-2"
+                ],
+                "sample_range": [
+                  -3.0,
+                  3.0
+                ],
+                "trail_seconds": 2.0
+              },
+              {
+                "id": "output-vector",
+                "kind": "matrix",
+                "data": "selected-vec",
+                "radius": 0.15,
+                "mass": 1.0,
+                "glow": false,
+                "origin": null,
+                "active_index": null,
+                "reveal_count": null,
+                "label": "输出向量",
+                "labels": [],
+                "color": "teal",
+                "source_refs": [
+                  "source-ba1ab91d-section-2-1-block-2"
+                ],
+                "sample_range": [
+                  -3.0,
+                  3.0
+                ],
+                "trail_seconds": 2.0
+              }
+            ],
+            "phases": [
+              {
+                "focus": [
+                  "input-token",
+                  "embed-matrix"
+                ],
+                "visible": [
+                  "input-token",
+                  "embed-matrix",
+                  "output-vector"
+                ]
+              },
+              {
+                "focus": [
+                  "embed-matrix",
+                  "output-vector"
+                ],
+                "visible": [
+                  "input-token",
+                  "embed-matrix",
+                  "output-vector"
+                ]
+              }
+            ],
+            "x_range": [
+              -4.0,
+              4.0
+            ],
+            "y_range": [
+              -3.0,
+              3.0
+            ]
+          },
+          "title": "",
+          "teaching_goal": "理解文本如何变成向量",
+          "learning_question": "输入的token是如何通过查表变成模型能计算的向量的？",
+          "visual_pattern": "state_transition",
+          "claims": [
+            {
+              "id": "tokenization-claim",
+              "text": "模型不能直接处理字符串，文本首先被切分为token，每个token对应词表中的一个整数编号。",
+              "source_refs": [
+                "source-ba1ab91d-section-2-1-block-1"
+              ]
+            },
+            {
+              "id": "embedding-claim",
+              "text": "模型通过嵌入表将离散token id映射为定长向量，这一步称为embedding。",
+              "source_refs": [
+                "source-ba1ab91d-section-2-1-block-2"
+              ]
+            }
+          ],
+          "preset": "chain",
+          "attachment": {},
+          "thresholds": {},
+          "elements": [
+            {
+              "id": "input-token",
+              "role": "node",
+              "label": "输入token",
+              "x": 240.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            },
+            {
+              "id": "embed-matrix",
+              "role": "node",
+              "label": "嵌入表",
+              "x": 480.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            },
+            {
+              "id": "output-vector",
+              "role": "node",
+              "label": "输出向量",
+              "x": 720.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          ],
+          "steps": [
+            {
+              "id": "step-token-input",
+              "title": "离散token",
+              "narration": "文本被切分为token，每个token对应词表中的一个整数编号。滑动参数切换不同token。",
+              "highlights": [
+                "input-token"
+              ],
+              "states": {},
+              "source_refs": [
+                "source-ba1ab91d-section-2-1-block-1"
+              ]
+            },
+            {
+              "id": "step-embed-lookup",
+              "title": "查表得向量",
+              "narration": "模型通过嵌入表查找，将token编号映射为固定长度的数值向量，成为可计算的数据。",
+              "highlights": [
+                "embed-matrix",
+                "output-vector"
+              ],
+              "states": {},
+              "source_refs": [
+                "source-ba1ab91d-section-2-1-block-2"
+              ]
+            }
+          ],
+          "controls": [
+            {
+              "id": "program-token-index",
+              "type": "slider",
+              "label": "token编号",
+              "target_property": "token-to-vector-program.token-index",
+              "min": 0.0,
+              "max": 3.0,
+              "default": 0.0,
+              "step": 1.0,
+              "unit": "",
+              "action": null
+            }
+          ],
+          "params": {}
+        }
+      },
+      {
+        "id": "predict-next",
+        "mechanism": {
+          "kind": "composition",
+          "goal": "用简化评分表观察 softmax 概率与贪心选择",
+          "observable_change": "调整输入状态观察输出概率分布和选中的token如何变化",
+          "example_label": "教学示例 · 非真实模型参数",
+          "source_refs": [
+            "source-ba1ab91d-section-2-4-llm-block-4",
+            "source-ba1ab91d-section-2-4-llm-block-5",
+            "source-ba1ab91d-section-2-3-ffn-block-6",
+            "source-47d4992f-section-overview-block-1",
+            "source-ba1ab91d-section-2-4-llm-block-6",
+            "source-ba1ab91d-section-2-4-llm-block-7"
+          ],
+          "nodes": [
+            {
+              "id": "input-state",
+              "op": "parameter",
+              "args": [],
+              "value": 0.0,
+              "label": "输入状态",
+              "min": 0.0,
+              "max": 2.0,
+              "step": 1.0
+            },
+            {
+              "id": "score-table",
+              "op": "constant",
+              "args": [],
+              "value": [
+                [
+                  2.0,
+                  0.5,
+                  -1.0,
+                  0.3
+                ],
+                [
+                  0.1,
+                  2.5,
+                  0.8,
+                  -0.5
+                ],
+                [
+                  -0.3,
+                  0.2,
+                  1.5,
+                  2.0
+                ]
+              ],
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "logits",
+              "op": "row",
+              "args": [
+                "score-table",
+                "input-state"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "probs",
+              "op": "softmax",
+              "args": [
+                "logits"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "chosen",
+              "op": "argmax",
+              "args": [
+                "probs"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "chosen-vec",
+              "op": "vector",
+              "args": [
+                "chosen"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            }
+          ],
+          "visuals": [
+            {
+              "id": "state-input",
+              "kind": "readout",
+              "data": "input-state",
+              "radius": 0.15,
+              "mass": 1.0,
+              "glow": false,
+              "origin": null,
+              "active_index": null,
+              "reveal_count": null,
+              "label": "当前输入状态编号",
+              "labels": [],
+              "color": "teal",
+              "source_refs": [
+                "source-ba1ab91d-section-2-4-llm-block-4",
+                "source-ba1ab91d-section-2-3-ffn-block-6"
+              ],
+              "sample_range": [
+                -3.0,
+                3.0
+              ],
+              "trail_seconds": 2.0
+            },
+            {
+              "id": "score-bars",
+              "kind": "bars",
+              "data": "logits",
+              "radius": 0.15,
+              "mass": 1.0,
+              "glow": false,
+              "origin": null,
+              "active_index": "chosen",
+              "reveal_count": null,
+              "label": "词表得分（logits）",
+              "labels": [
+                "猫",
+                "狗",
+                "跑",
+                "跳"
+              ],
+              "color": "blue",
+              "source_refs": [
+                "source-ba1ab91d-section-2-4-llm-block-5",
+                "source-ba1ab91d-section-2-3-ffn-block-6"
+              ],
+              "sample_range": [
+                -3.0,
+                3.0
+              ],
+              "trail_seconds": 2.0
+            },
+            {
+              "id": "prob-bars",
+              "kind": "bars",
+              "data": "probs",
+              "radius": 0.15,
+              "mass": 1.0,
+              "glow": false,
+              "origin": null,
+              "active_index": "chosen",
+              "reveal_count": null,
+              "label": "概率分布（softmax后）",
+              "labels": [
+                "猫",
+                "狗",
+                "跑",
+                "跳"
+              ],
+              "color": "teal",
+              "source_refs": [
+                "source-ba1ab91d-section-2-4-llm-block-5",
+                "source-ba1ab91d-section-2-4-llm-block-6"
+              ],
+              "sample_range": [
+                -3.0,
+                3.0
+              ],
+              "trail_seconds": 2.0
+            },
+            {
+              "id": "next-token",
+              "kind": "tokens",
+              "data": "chosen-vec",
+              "radius": 0.15,
+              "mass": 1.0,
+              "glow": false,
+              "origin": null,
+              "active_index": null,
+              "reveal_count": null,
+              "label": "选中的下一个token",
+              "labels": [
+                "猫",
+                "狗",
+                "跑",
+                "跳"
+              ],
+              "color": "gold",
+              "source_refs": [
+                "source-47d4992f-section-overview-block-1",
+                "source-ba1ab91d-section-2-4-llm-block-7"
+              ],
+              "sample_range": [
+                -3.0,
+                3.0
+              ],
+              "trail_seconds": 2.0
+            }
+          ],
+          "phases": [
+            {
+              "focus": [
+                "state-input",
+                "score-bars"
+              ],
+              "visible": [
+                "state-input",
+                "score-bars",
+                "prob-bars",
+                "next-token"
+              ]
+            },
+            {
+              "focus": [
+                "prob-bars",
+                "next-token"
+              ],
+              "visible": [
+                "state-input",
+                "score-bars",
+                "prob-bars",
+                "next-token"
+              ]
+            }
+          ],
+          "x_range": [
+            -5.0,
+            5.0
+          ],
+          "y_range": [
+            -4.0,
+            4.0
+          ]
+        },
+        "metadata": {
+          "title": "",
+          "teachingGoal": "理解模型如何预测下一个token",
+          "learningQuestion": "模型拿到向量后，怎样计算出下一个token的概率分布？",
+          "visualPattern": "system_process",
+          "claims": [
+            {
+              "id": "transformer-process-claim",
+              "text": "向量经过多层Attention和FFN处理，模型对整个词表打分，输出下一个位置的概率分布。",
+              "source_refs": [
+                "source-ba1ab91d-section-2-4-llm-block-4",
+                "source-ba1ab91d-section-2-4-llm-block-5",
+                "source-ba1ab91d-section-2-3-ffn-block-6"
+              ]
+            },
+            {
+              "id": "softmax-select-claim",
+              "text": "系统依据概率分布选取新token，将其追加到序列末尾，继续进行下一轮预测。",
+              "source_refs": [
+                "source-47d4992f-section-overview-block-1",
+                "source-ba1ab91d-section-2-4-llm-block-6",
+                "source-ba1ab91d-section-2-4-llm-block-7"
+              ]
+            }
+          ],
+          "preset": "chain"
+        },
+        "nodes": [
+          {
+            "id": "state-input",
+            "kind": "body",
+            "parentId": null,
+            "transform": {
+              "position": {
+                "x": 192.0,
+                "y": 300.0
+              },
+              "rotation": 0.0,
+              "scale": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "opacity": 1.0,
+              "pathProgress": 0.0
+            },
+            "style": {
+              "tone": "normal",
+              "highlight": false,
+              "glowIntensity": 0.0
+            },
+            "visual": {
+              "id": "state-input",
+              "role": "node",
+              "label": "当前输入状态编号",
+              "x": 192.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0,
+              "originalText": "",
+              "visibleText": "",
+              "drawProgress": 1.0,
+              "trimStart": 0.0,
+              "trimEnd": 1.0,
+              "revealProgress": 1.0,
+              "cursorVisible": false
+            },
+            "semantic": {
+              "progress": 0.0,
+              "intensity": 0.0,
+              "phase": "idle"
+            },
+            "legacy": {
+              "id": "state-input",
+              "role": "node",
+              "label": "当前输入状态编号",
+              "x": 192.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          },
+          {
+            "id": "score-bars",
+            "kind": "body",
+            "parentId": null,
+            "transform": {
+              "position": {
+                "x": 384.0,
+                "y": 300.0
+              },
+              "rotation": 0.0,
+              "scale": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "opacity": 1.0,
+              "pathProgress": 0.0
+            },
+            "style": {
+              "tone": "normal",
+              "highlight": false,
+              "glowIntensity": 0.0
+            },
+            "visual": {
+              "id": "score-bars",
+              "role": "node",
+              "label": "词表得分（logits）",
+              "x": 384.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0,
+              "originalText": "",
+              "visibleText": "",
+              "drawProgress": 1.0,
+              "trimStart": 0.0,
+              "trimEnd": 1.0,
+              "revealProgress": 1.0,
+              "cursorVisible": false
+            },
+            "semantic": {
+              "progress": 0.0,
+              "intensity": 0.0,
+              "phase": "idle"
+            },
+            "legacy": {
+              "id": "score-bars",
+              "role": "node",
+              "label": "词表得分（logits）",
+              "x": 384.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          },
+          {
+            "id": "prob-bars",
+            "kind": "body",
+            "parentId": null,
+            "transform": {
+              "position": {
+                "x": 576.0,
+                "y": 300.0
+              },
+              "rotation": 0.0,
+              "scale": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "opacity": 1.0,
+              "pathProgress": 0.0
+            },
+            "style": {
+              "tone": "normal",
+              "highlight": false,
+              "glowIntensity": 0.0
+            },
+            "visual": {
+              "id": "prob-bars",
+              "role": "node",
+              "label": "概率分布（softmax后）",
+              "x": 576.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0,
+              "originalText": "",
+              "visibleText": "",
+              "drawProgress": 1.0,
+              "trimStart": 0.0,
+              "trimEnd": 1.0,
+              "revealProgress": 1.0,
+              "cursorVisible": false
+            },
+            "semantic": {
+              "progress": 0.0,
+              "intensity": 0.0,
+              "phase": "idle"
+            },
+            "legacy": {
+              "id": "prob-bars",
+              "role": "node",
+              "label": "概率分布（softmax后）",
+              "x": 576.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          },
+          {
+            "id": "next-token",
+            "kind": "body",
+            "parentId": null,
+            "transform": {
+              "position": {
+                "x": 768.0,
+                "y": 300.0
+              },
+              "rotation": 0.0,
+              "scale": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "opacity": 1.0,
+              "pathProgress": 0.0
+            },
+            "style": {
+              "tone": "normal",
+              "highlight": false,
+              "glowIntensity": 0.0
+            },
+            "visual": {
+              "id": "next-token",
+              "role": "node",
+              "label": "选中的下一个token",
+              "x": 768.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0,
+              "originalText": "",
+              "visibleText": "",
+              "drawProgress": 1.0,
+              "trimStart": 0.0,
+              "trimEnd": 1.0,
+              "revealProgress": 1.0,
+              "cursorVisible": false
+            },
+            "semantic": {
+              "progress": 0.0,
+              "intensity": 0.0,
+              "phase": "idle"
+            },
+            "legacy": {
+              "id": "next-token",
+              "role": "node",
+              "label": "选中的下一个token",
+              "x": 768.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          }
+        ],
+        "camera": {
+          "id": "main",
+          "position": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "zoom": 1.0,
+          "rotation": 0.0
+        },
+        "beats": [
+          {
+            "id": "step-score",
+            "title": "词表打分",
+            "narration": "真实模型通过 Attention 和 FFN 计算状态；这里用教学评分表代替这一过程，只观察不同状态的词表得分如何变成概率。",
+            "sourceRefs": [
+              "source-ba1ab91d-section-2-4-llm-block-5",
+              "source-ba1ab91d-section-2-3-ffn-block-6"
+            ],
+            "durationInFrames": 399,
+            "timeline": {
+              "items": [
+                {
+                  "type": "parallel",
+                  "delay": 0.0,
+                  "children": [
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "score-bars"
+                      },
+                      "property": "style.glowIntensity",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 0.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.22,
+                          "value": 1.0,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.86,
+                          "value": 0.32,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 0.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "score-bars"
+                      },
+                      "property": "semantic.phase",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": "entering",
+                          "easing": "linear",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 0.12,
+                          "value": "active",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 1.28,
+                          "value": "settled",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "score-bars"
+                      },
+                      "property": "transform.scale",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.34,
+                          "value": {
+                            "x": 1.09,
+                            "y": 1.09
+                          },
+                          "easing": "backOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.92,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.position",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": {
+                            "x": -15.36,
+                            "y": 0.0
+                          },
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.zoom",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 1.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": 1.055,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 1.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    }
+                  ]
+                }
+              ],
+              "effects": []
+            }
+          },
+          {
+            "id": "step-prob-select",
+            "title": "概率与选择",
+            "narration": "分数通过softmax转为概率，系统依据概率分布贪心选择概率最高的token作为输出。",
+            "sourceRefs": [
+              "source-47d4992f-section-overview-block-1",
+              "source-ba1ab91d-section-2-4-llm-block-7"
+            ],
+            "durationInFrames": 294,
+            "timeline": {
+              "items": [
+                {
+                  "type": "parallel",
+                  "delay": 0.0,
+                  "children": [
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "prob-bars"
+                      },
+                      "property": "style.glowIntensity",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 0.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.22,
+                          "value": 1.0,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.86,
+                          "value": 0.32,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 0.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "prob-bars"
+                      },
+                      "property": "semantic.phase",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": "entering",
+                          "easing": "linear",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 0.12,
+                          "value": "active",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 1.28,
+                          "value": "settled",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "prob-bars"
+                      },
+                      "property": "transform.scale",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.34,
+                          "value": {
+                            "x": 1.09,
+                            "y": 1.09
+                          },
+                          "easing": "backOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.92,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "next-token"
+                      },
+                      "property": "style.glowIntensity",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 0.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.22,
+                          "value": 1.0,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.86,
+                          "value": 0.32,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 0.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.055,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "next-token"
+                      },
+                      "property": "semantic.phase",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": "entering",
+                          "easing": "linear",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 0.12,
+                          "value": "active",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 1.28,
+                          "value": "settled",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        }
+                      ],
+                      "delay": 0.055,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "next-token"
+                      },
+                      "property": "transform.scale",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.34,
+                          "value": {
+                            "x": 1.09,
+                            "y": 1.09
+                          },
+                          "easing": "backOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.92,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.055,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.position",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": {
+                            "x": 30.72,
+                            "y": 0.0
+                          },
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.zoom",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 1.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": 1.055,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 1.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    }
+                  ]
+                }
+              ],
+              "effects": []
+            }
+          }
+        ],
+        "timeline": {
+          "items": [],
+          "effects": []
+        },
+        "interactions": [
+          {
+            "id": "program-input-state",
+            "type": "slider",
+            "label": "输入状态",
+            "target_property": "predict-next-program.input-state",
+            "min": 0.0,
+            "max": 2.0,
+            "default": 0.0,
+            "step": 1.0,
+            "unit": "",
+            "action": null
+          }
+        ],
+        "legacy": {
+          "id": "predict-next",
+          "mechanism": {
+            "kind": "composition",
+            "goal": "用简化评分表观察 softmax 概率与贪心选择",
+            "observable_change": "调整输入状态观察输出概率分布和选中的token如何变化",
+            "example_label": "教学示例 · 非真实模型参数",
+            "source_refs": [
+              "source-ba1ab91d-section-2-4-llm-block-4",
+              "source-ba1ab91d-section-2-4-llm-block-5",
+              "source-ba1ab91d-section-2-3-ffn-block-6",
+              "source-47d4992f-section-overview-block-1",
+              "source-ba1ab91d-section-2-4-llm-block-6",
+              "source-ba1ab91d-section-2-4-llm-block-7"
+            ],
+            "nodes": [
+              {
+                "id": "input-state",
+                "op": "parameter",
+                "args": [],
+                "value": 0.0,
+                "label": "输入状态",
+                "min": 0.0,
+                "max": 2.0,
+                "step": 1.0
+              },
+              {
+                "id": "score-table",
+                "op": "constant",
+                "args": [],
+                "value": [
+                  [
+                    2.0,
+                    0.5,
+                    -1.0,
+                    0.3
+                  ],
+                  [
+                    0.1,
+                    2.5,
+                    0.8,
+                    -0.5
+                  ],
+                  [
+                    -0.3,
+                    0.2,
+                    1.5,
+                    2.0
+                  ]
+                ],
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "logits",
+                "op": "row",
+                "args": [
+                  "score-table",
+                  "input-state"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "probs",
+                "op": "softmax",
+                "args": [
+                  "logits"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "chosen",
+                "op": "argmax",
+                "args": [
+                  "probs"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "chosen-vec",
+                "op": "vector",
+                "args": [
+                  "chosen"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              }
+            ],
+            "visuals": [
+              {
+                "id": "state-input",
+                "kind": "readout",
+                "data": "input-state",
+                "radius": 0.15,
+                "mass": 1.0,
+                "glow": false,
+                "origin": null,
+                "active_index": null,
+                "reveal_count": null,
+                "label": "当前输入状态编号",
+                "labels": [],
+                "color": "teal",
+                "source_refs": [
+                  "source-ba1ab91d-section-2-4-llm-block-4",
+                  "source-ba1ab91d-section-2-3-ffn-block-6"
+                ],
+                "sample_range": [
+                  -3.0,
+                  3.0
+                ],
+                "trail_seconds": 2.0
+              },
+              {
+                "id": "score-bars",
+                "kind": "bars",
+                "data": "logits",
+                "radius": 0.15,
+                "mass": 1.0,
+                "glow": false,
+                "origin": null,
+                "active_index": "chosen",
+                "reveal_count": null,
+                "label": "词表得分（logits）",
+                "labels": [
+                  "猫",
+                  "狗",
+                  "跑",
+                  "跳"
+                ],
+                "color": "blue",
+                "source_refs": [
+                  "source-ba1ab91d-section-2-4-llm-block-5",
+                  "source-ba1ab91d-section-2-3-ffn-block-6"
+                ],
+                "sample_range": [
+                  -3.0,
+                  3.0
+                ],
+                "trail_seconds": 2.0
+              },
+              {
+                "id": "prob-bars",
+                "kind": "bars",
+                "data": "probs",
+                "radius": 0.15,
+                "mass": 1.0,
+                "glow": false,
+                "origin": null,
+                "active_index": "chosen",
+                "reveal_count": null,
+                "label": "概率分布（softmax后）",
+                "labels": [
+                  "猫",
+                  "狗",
+                  "跑",
+                  "跳"
+                ],
+                "color": "teal",
+                "source_refs": [
+                  "source-ba1ab91d-section-2-4-llm-block-5",
+                  "source-ba1ab91d-section-2-4-llm-block-6"
+                ],
+                "sample_range": [
+                  -3.0,
+                  3.0
+                ],
+                "trail_seconds": 2.0
+              },
+              {
+                "id": "next-token",
+                "kind": "tokens",
+                "data": "chosen-vec",
+                "radius": 0.15,
+                "mass": 1.0,
+                "glow": false,
+                "origin": null,
+                "active_index": null,
+                "reveal_count": null,
+                "label": "选中的下一个token",
+                "labels": [
+                  "猫",
+                  "狗",
+                  "跑",
+                  "跳"
+                ],
+                "color": "gold",
+                "source_refs": [
+                  "source-47d4992f-section-overview-block-1",
+                  "source-ba1ab91d-section-2-4-llm-block-7"
+                ],
+                "sample_range": [
+                  -3.0,
+                  3.0
+                ],
+                "trail_seconds": 2.0
+              }
+            ],
+            "phases": [
+              {
+                "focus": [
+                  "state-input",
+                  "score-bars"
+                ],
+                "visible": [
+                  "state-input",
+                  "score-bars",
+                  "prob-bars",
+                  "next-token"
+                ]
+              },
+              {
+                "focus": [
+                  "prob-bars",
+                  "next-token"
+                ],
+                "visible": [
+                  "state-input",
+                  "score-bars",
+                  "prob-bars",
+                  "next-token"
+                ]
+              }
+            ],
+            "x_range": [
+              -5.0,
+              5.0
+            ],
+            "y_range": [
+              -4.0,
+              4.0
+            ]
+          },
+          "title": "",
+          "teaching_goal": "理解模型如何预测下一个token",
+          "learning_question": "模型拿到向量后，怎样计算出下一个token的概率分布？",
+          "visual_pattern": "system_process",
+          "claims": [
+            {
+              "id": "transformer-process-claim",
+              "text": "向量经过多层Attention和FFN处理，模型对整个词表打分，输出下一个位置的概率分布。",
+              "source_refs": [
+                "source-ba1ab91d-section-2-4-llm-block-4",
+                "source-ba1ab91d-section-2-4-llm-block-5",
+                "source-ba1ab91d-section-2-3-ffn-block-6"
+              ]
+            },
+            {
+              "id": "softmax-select-claim",
+              "text": "系统依据概率分布选取新token，将其追加到序列末尾，继续进行下一轮预测。",
+              "source_refs": [
+                "source-47d4992f-section-overview-block-1",
+                "source-ba1ab91d-section-2-4-llm-block-6",
+                "source-ba1ab91d-section-2-4-llm-block-7"
+              ]
+            }
+          ],
+          "preset": "chain",
+          "attachment": {},
+          "thresholds": {},
+          "elements": [
+            {
+              "id": "state-input",
+              "role": "node",
+              "label": "当前输入状态编号",
+              "x": 192.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            },
+            {
+              "id": "score-bars",
+              "role": "node",
+              "label": "词表得分（logits）",
+              "x": 384.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            },
+            {
+              "id": "prob-bars",
+              "role": "node",
+              "label": "概率分布（softmax后）",
+              "x": 576.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            },
+            {
+              "id": "next-token",
+              "role": "node",
+              "label": "选中的下一个token",
+              "x": 768.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          ],
+          "steps": [
+            {
+              "id": "step-score",
+              "title": "词表打分",
+              "narration": "真实模型通过 Attention 和 FFN 计算状态；这里用教学评分表代替这一过程，只观察不同状态的词表得分如何变成概率。",
+              "highlights": [
+                "score-bars"
+              ],
+              "states": {},
+              "source_refs": [
+                "source-ba1ab91d-section-2-4-llm-block-5",
+                "source-ba1ab91d-section-2-3-ffn-block-6"
+              ]
+            },
+            {
+              "id": "step-prob-select",
+              "title": "概率与选择",
+              "narration": "分数通过softmax转为概率，系统依据概率分布贪心选择概率最高的token作为输出。",
+              "highlights": [
+                "prob-bars",
+                "next-token"
+              ],
+              "states": {},
+              "source_refs": [
+                "source-47d4992f-section-overview-block-1",
+                "source-ba1ab91d-section-2-4-llm-block-7"
+              ]
+            }
+          ],
+          "controls": [
+            {
+              "id": "program-input-state",
+              "type": "slider",
+              "label": "输入状态",
+              "target_property": "predict-next-program.input-state",
+              "min": 0.0,
+              "max": 2.0,
+              "default": 0.0,
+              "step": 1.0,
+              "unit": "",
+              "action": null
+            }
+          ],
+          "params": {}
+        }
+      },
+      {
+        "id": "autoregressive-loop",
+        "mechanism": {
+          "kind": "composition",
+          "goal": "展示简化自回归循环：生成结果成为下一步输入",
+          "observable_change": "序列逐步增长，每轮用上轮输出作为新输入继续预测",
+          "example_label": "教学示例 · 一阶反馈，非完整 Transformer",
+          "source_refs": [
+            "source-47d4992f-section-overview-block-1",
+            "source-ba1ab91d-section-2-4-llm-block-7",
+            "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-2",
+            "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-3",
+            "source-ba1ab91d-section-3-3-decode-token-block-1"
+          ],
+          "nodes": [
+            {
+              "id": "seed-token",
+              "op": "parameter",
+              "args": [],
+              "value": 0.0,
+              "label": "起始token",
+              "min": 0.0,
+              "max": 2.0,
+              "step": 1.0
+            },
+            {
+              "id": "transition-mat",
+              "op": "constant",
+              "args": [],
+              "value": [
+                [
+                  0.0,
+                  2.0,
+                  1.0
+                ],
+                [
+                  2.0,
+                  1.0,
+                  0.0
+                ],
+                [
+                  1.0,
+                  0.0,
+                  2.0
+                ]
+              ],
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "beat",
+              "op": "phase",
+              "args": [],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "one",
+              "op": "constant",
+              "args": [],
+              "value": 1.0,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "two",
+              "op": "constant",
+              "args": [],
+              "value": 2.0,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "reveal",
+              "op": "add",
+              "args": [
+                "beat",
+                "two"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "logits-0",
+              "op": "row",
+              "args": [
+                "transition-mat",
+                "seed-token"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "choice-0",
+              "op": "argmax",
+              "args": [
+                "logits-0"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "token-0",
+              "op": "vector",
+              "args": [
+                "choice-0"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "logits-1",
+              "op": "row",
+              "args": [
+                "transition-mat",
+                "choice-0"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "choice-1",
+              "op": "argmax",
+              "args": [
+                "logits-1"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "token-1",
+              "op": "vector",
+              "args": [
+                "choice-1"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "logits-2",
+              "op": "row",
+              "args": [
+                "transition-mat",
+                "choice-1"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "choice-2",
+              "op": "argmax",
+              "args": [
+                "logits-2"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "token-2",
+              "op": "vector",
+              "args": [
+                "choice-2"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "prefix",
+              "op": "vector",
+              "args": [
+                "seed-token"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "sequence",
+              "op": "concat",
+              "args": [
+                "prefix",
+                "token-0",
+                "token-1",
+                "token-2"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "probs-0",
+              "op": "softmax",
+              "args": [
+                "logits-0"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "probs-1",
+              "op": "softmax",
+              "args": [
+                "logits-1"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "probs-2",
+              "op": "softmax",
+              "args": [
+                "logits-2"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "all-probs",
+              "op": "stack",
+              "args": [
+                "probs-0",
+                "probs-1",
+                "probs-2"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "current-prob",
+              "op": "row",
+              "args": [
+                "all-probs",
+                "beat"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            },
+            {
+              "id": "current-winner",
+              "op": "argmax",
+              "args": [
+                "current-prob"
+              ],
+              "value": null,
+              "label": "",
+              "min": null,
+              "max": null,
+              "step": 0.1
+            }
+          ],
+          "visuals": [
+            {
+              "id": "history-seq",
+              "kind": "tokens",
+              "data": "sequence",
+              "radius": 0.15,
+              "mass": 1.0,
+              "glow": false,
+              "origin": null,
+              "active_index": null,
+              "reveal_count": "reveal",
+              "label": "生成序列（历史+新token）",
+              "labels": [
+                "猫",
+                "狗",
+                "跑"
+              ],
+              "color": "teal",
+              "source_refs": [
+                "source-47d4992f-section-overview-block-1",
+                "source-ba1ab91d-section-2-4-llm-block-7"
+              ],
+              "sample_range": [
+                -3.0,
+                3.0
+              ],
+              "trail_seconds": 2.0
+            },
+            {
+              "id": "current-dist",
+              "kind": "bars",
+              "data": "current-prob",
+              "radius": 0.15,
+              "mass": 1.0,
+              "glow": false,
+              "origin": null,
+              "active_index": "current-winner",
+              "reveal_count": null,
+              "label": "本轮预测概率",
+              "labels": [
+                "猫",
+                "狗",
+                "跑"
+              ],
+              "color": "teal",
+              "source_refs": [
+                "source-ba1ab91d-section-3-3-decode-token-block-1",
+                "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-2",
+                "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-3"
+              ],
+              "sample_range": [
+                -3.0,
+                3.0
+              ],
+              "trail_seconds": 2.0
+            }
+          ],
+          "phases": [
+            {
+              "focus": [
+                "history-seq"
+              ],
+              "visible": [
+                "history-seq",
+                "current-dist"
+              ]
+            },
+            {
+              "focus": [
+                "current-dist"
+              ],
+              "visible": [
+                "history-seq",
+                "current-dist"
+              ]
+            },
+            {
+              "focus": [
+                "history-seq"
+              ],
+              "visible": [
+                "history-seq",
+                "current-dist"
+              ]
+            }
+          ],
+          "x_range": [
+            -5.0,
+            5.0
+          ],
+          "y_range": [
+            -4.0,
+            4.0
+          ]
+        },
+        "metadata": {
+          "title": "",
+          "teachingGoal": "理解自回归生成循环",
+          "learningQuestion": "模型如何把预测出的token反馈回去，继续生成下一个？",
+          "visualPattern": "flow",
+          "claims": [
+            {
+              "id": "feedback-loop-claim",
+              "text": "LLM将预测出的token拼接到prompt后面，再预测下一个，如此重复形成自回归生成。",
+              "source_refs": [
+                "source-47d4992f-section-overview-block-1",
+                "source-ba1ab91d-section-2-4-llm-block-7"
+              ]
+            },
+            {
+              "id": "prefill-decode-claim",
+              "text": "Prefill阶段并行处理输入token建立缓存，Decode阶段每次只生成一个新token并依赖历史状态。",
+              "source_refs": [
+                "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-2",
+                "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-3",
+                "source-ba1ab91d-section-3-3-decode-token-block-1"
+              ]
+            }
+          ],
+          "preset": "chain"
+        },
+        "nodes": [
+          {
+            "id": "history-seq",
+            "kind": "body",
+            "parentId": null,
+            "transform": {
+              "position": {
+                "x": 320.0,
+                "y": 300.0
+              },
+              "rotation": 0.0,
+              "scale": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "opacity": 1.0,
+              "pathProgress": 0.0
+            },
+            "style": {
+              "tone": "normal",
+              "highlight": false,
+              "glowIntensity": 0.0
+            },
+            "visual": {
+              "id": "history-seq",
+              "role": "node",
+              "label": "生成序列（历史+新token）",
+              "x": 320.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0,
+              "originalText": "",
+              "visibleText": "",
+              "drawProgress": 1.0,
+              "trimStart": 0.0,
+              "trimEnd": 1.0,
+              "revealProgress": 1.0,
+              "cursorVisible": false
+            },
+            "semantic": {
+              "progress": 0.0,
+              "intensity": 0.0,
+              "phase": "idle"
+            },
+            "legacy": {
+              "id": "history-seq",
+              "role": "node",
+              "label": "生成序列（历史+新token）",
+              "x": 320.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          },
+          {
+            "id": "current-dist",
+            "kind": "body",
+            "parentId": null,
+            "transform": {
+              "position": {
+                "x": 640.0,
+                "y": 300.0
+              },
+              "rotation": 0.0,
+              "scale": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "opacity": 1.0,
+              "pathProgress": 0.0
+            },
+            "style": {
+              "tone": "normal",
+              "highlight": false,
+              "glowIntensity": 0.0
+            },
+            "visual": {
+              "id": "current-dist",
+              "role": "node",
+              "label": "本轮预测概率",
+              "x": 640.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0,
+              "originalText": "",
+              "visibleText": "",
+              "drawProgress": 1.0,
+              "trimStart": 0.0,
+              "trimEnd": 1.0,
+              "revealProgress": 1.0,
+              "cursorVisible": false
+            },
+            "semantic": {
+              "progress": 0.0,
+              "intensity": 0.0,
+              "phase": "idle"
+            },
+            "legacy": {
+              "id": "current-dist",
+              "role": "node",
+              "label": "本轮预测概率",
+              "x": 640.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          }
+        ],
+        "camera": {
+          "id": "main",
+          "position": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "zoom": 1.0,
+          "rotation": 0.0
+        },
+        "beats": [
+          {
+            "id": "step-prefill",
+            "title": "初始输入",
+            "narration": "给定起始token，模型开始第一轮预测，输出第一个新token并追加到序列。",
+            "sourceRefs": [
+              "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-2"
+            ],
+            "durationInFrames": 264,
+            "timeline": {
+              "items": [
+                {
+                  "type": "parallel",
+                  "delay": 0.0,
+                  "children": [
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "history-seq"
+                      },
+                      "property": "style.glowIntensity",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 0.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.22,
+                          "value": 1.0,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.86,
+                          "value": 0.32,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 0.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "history-seq"
+                      },
+                      "property": "semantic.phase",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": "entering",
+                          "easing": "linear",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 0.12,
+                          "value": "active",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 1.28,
+                          "value": "settled",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "history-seq"
+                      },
+                      "property": "transform.scale",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.34,
+                          "value": {
+                            "x": 1.09,
+                            "y": 1.09
+                          },
+                          "easing": "backOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.92,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.position",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": {
+                            "x": -25.6,
+                            "y": 0.0
+                          },
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.zoom",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 1.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": 1.055,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 1.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    }
+                  ]
+                }
+              ],
+              "effects": []
+            }
+          },
+          {
+            "id": "step-decode-1",
+            "title": "第二轮预测",
+            "narration": "模型根据当前序列状态预测概率分布，选择下一个token，生成结果成为下一步的输入。",
+            "sourceRefs": [
+              "source-47d4992f-section-overview-block-1",
+              "source-ba1ab91d-section-2-4-llm-block-7"
+            ],
+            "durationInFrames": 304,
+            "timeline": {
+              "items": [
+                {
+                  "type": "parallel",
+                  "delay": 0.0,
+                  "children": [
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "current-dist"
+                      },
+                      "property": "style.glowIntensity",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 0.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.22,
+                          "value": 1.0,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.86,
+                          "value": 0.32,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 0.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "current-dist"
+                      },
+                      "property": "semantic.phase",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": "entering",
+                          "easing": "linear",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 0.12,
+                          "value": "active",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 1.28,
+                          "value": "settled",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "current-dist"
+                      },
+                      "property": "transform.scale",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.34,
+                          "value": {
+                            "x": 1.09,
+                            "y": 1.09
+                          },
+                          "easing": "backOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.92,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "history-seq"
+                      },
+                      "property": "style.glowIntensity",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 0.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.22,
+                          "value": 1.0,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.86,
+                          "value": 0.32,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 0.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.055,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "history-seq"
+                      },
+                      "property": "semantic.phase",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": "entering",
+                          "easing": "linear",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 0.12,
+                          "value": "active",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 1.28,
+                          "value": "settled",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        }
+                      ],
+                      "delay": 0.055,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "history-seq"
+                      },
+                      "property": "transform.scale",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.34,
+                          "value": {
+                            "x": 1.09,
+                            "y": 1.09
+                          },
+                          "easing": "backOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.92,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.055,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.position",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.zoom",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 1.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": 1.055,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 1.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    }
+                  ]
+                }
+              ],
+              "effects": []
+            }
+          },
+          {
+            "id": "step-decode-2",
+            "title": "循环继续",
+            "narration": "上一轮算出的 token 成为下一轮输入，序列继续增长。此简化模型只使用最后一个 token；真实 LLM 会利用可见上下文，而不是只看最后一个 token。",
+            "sourceRefs": [
+              "source-ba1ab91d-section-3-3-decode-token-block-1",
+              "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-3"
+            ],
+            "durationInFrames": 491,
+            "timeline": {
+              "items": [
+                {
+                  "type": "parallel",
+                  "delay": 0.0,
+                  "children": [
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "history-seq"
+                      },
+                      "property": "style.glowIntensity",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 0.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.22,
+                          "value": 1.0,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.86,
+                          "value": 0.32,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 0.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "history-seq"
+                      },
+                      "property": "semantic.phase",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": "entering",
+                          "easing": "linear",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 0.12,
+                          "value": "active",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        },
+                        {
+                          "time": 1.28,
+                          "value": "settled",
+                          "easing": "easeInOut",
+                          "interpolation": "discrete"
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "node",
+                        "id": "history-seq"
+                      },
+                      "property": "transform.scale",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.34,
+                          "value": {
+                            "x": 1.09,
+                            "y": 1.09
+                          },
+                          "easing": "backOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.92,
+                          "value": {
+                            "x": 1.0,
+                            "y": 1.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.0,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.position",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": {
+                            "x": -25.6,
+                            "y": 0.0
+                          },
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": {
+                            "x": 0.0,
+                            "y": 0.0
+                          },
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    },
+                    {
+                      "type": "track",
+                      "target": {
+                        "type": "camera",
+                        "id": "main"
+                      },
+                      "property": "camera.zoom",
+                      "keyframes": [
+                        {
+                          "time": 0.0,
+                          "value": 1.0,
+                          "easing": "linear",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 0.42,
+                          "value": 1.055,
+                          "easing": "expoOut",
+                          "interpolation": null
+                        },
+                        {
+                          "time": 1.28,
+                          "value": 1.0,
+                          "easing": "easeInOut",
+                          "interpolation": null
+                        }
+                      ],
+                      "delay": 0.03,
+                      "duration": null
+                    }
+                  ]
+                }
+              ],
+              "effects": []
+            }
+          }
+        ],
+        "timeline": {
+          "items": [],
+          "effects": []
+        },
+        "interactions": [
+          {
+            "id": "program-seed-token",
+            "type": "slider",
+            "label": "起始token",
+            "target_property": "autoregressive-loop-program.seed-token",
+            "min": 0.0,
+            "max": 2.0,
+            "default": 0.0,
+            "step": 1.0,
+            "unit": "",
+            "action": null
+          }
+        ],
+        "legacy": {
+          "id": "autoregressive-loop",
+          "mechanism": {
+            "kind": "composition",
+            "goal": "展示简化自回归循环：生成结果成为下一步输入",
+            "observable_change": "序列逐步增长，每轮用上轮输出作为新输入继续预测",
+            "example_label": "教学示例 · 一阶反馈，非完整 Transformer",
+            "source_refs": [
+              "source-47d4992f-section-overview-block-1",
+              "source-ba1ab91d-section-2-4-llm-block-7",
+              "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-2",
+              "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-3",
+              "source-ba1ab91d-section-3-3-decode-token-block-1"
+            ],
+            "nodes": [
+              {
+                "id": "seed-token",
+                "op": "parameter",
+                "args": [],
+                "value": 0.0,
+                "label": "起始token",
+                "min": 0.0,
+                "max": 2.0,
+                "step": 1.0
+              },
+              {
+                "id": "transition-mat",
+                "op": "constant",
+                "args": [],
+                "value": [
+                  [
+                    0.0,
+                    2.0,
+                    1.0
+                  ],
+                  [
+                    2.0,
+                    1.0,
+                    0.0
+                  ],
+                  [
+                    1.0,
+                    0.0,
+                    2.0
+                  ]
+                ],
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "beat",
+                "op": "phase",
+                "args": [],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "one",
+                "op": "constant",
+                "args": [],
+                "value": 1.0,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "two",
+                "op": "constant",
+                "args": [],
+                "value": 2.0,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "reveal",
+                "op": "add",
+                "args": [
+                  "beat",
+                  "two"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "logits-0",
+                "op": "row",
+                "args": [
+                  "transition-mat",
+                  "seed-token"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "choice-0",
+                "op": "argmax",
+                "args": [
+                  "logits-0"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "token-0",
+                "op": "vector",
+                "args": [
+                  "choice-0"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "logits-1",
+                "op": "row",
+                "args": [
+                  "transition-mat",
+                  "choice-0"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "choice-1",
+                "op": "argmax",
+                "args": [
+                  "logits-1"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "token-1",
+                "op": "vector",
+                "args": [
+                  "choice-1"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "logits-2",
+                "op": "row",
+                "args": [
+                  "transition-mat",
+                  "choice-1"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "choice-2",
+                "op": "argmax",
+                "args": [
+                  "logits-2"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "token-2",
+                "op": "vector",
+                "args": [
+                  "choice-2"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "prefix",
+                "op": "vector",
+                "args": [
+                  "seed-token"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "sequence",
+                "op": "concat",
+                "args": [
+                  "prefix",
+                  "token-0",
+                  "token-1",
+                  "token-2"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "probs-0",
+                "op": "softmax",
+                "args": [
+                  "logits-0"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "probs-1",
+                "op": "softmax",
+                "args": [
+                  "logits-1"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "probs-2",
+                "op": "softmax",
+                "args": [
+                  "logits-2"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "all-probs",
+                "op": "stack",
+                "args": [
+                  "probs-0",
+                  "probs-1",
+                  "probs-2"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "current-prob",
+                "op": "row",
+                "args": [
+                  "all-probs",
+                  "beat"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              },
+              {
+                "id": "current-winner",
+                "op": "argmax",
+                "args": [
+                  "current-prob"
+                ],
+                "value": null,
+                "label": "",
+                "min": null,
+                "max": null,
+                "step": 0.1
+              }
+            ],
+            "visuals": [
+              {
+                "id": "history-seq",
+                "kind": "tokens",
+                "data": "sequence",
+                "radius": 0.15,
+                "mass": 1.0,
+                "glow": false,
+                "origin": null,
+                "active_index": null,
+                "reveal_count": "reveal",
+                "label": "生成序列（历史+新token）",
+                "labels": [
+                  "猫",
+                  "狗",
+                  "跑"
+                ],
+                "color": "teal",
+                "source_refs": [
+                  "source-47d4992f-section-overview-block-1",
+                  "source-ba1ab91d-section-2-4-llm-block-7"
+                ],
+                "sample_range": [
+                  -3.0,
+                  3.0
+                ],
+                "trail_seconds": 2.0
+              },
+              {
+                "id": "current-dist",
+                "kind": "bars",
+                "data": "current-prob",
+                "radius": 0.15,
+                "mass": 1.0,
+                "glow": false,
+                "origin": null,
+                "active_index": "current-winner",
+                "reveal_count": null,
+                "label": "本轮预测概率",
+                "labels": [
+                  "猫",
+                  "狗",
+                  "跑"
+                ],
+                "color": "teal",
+                "source_refs": [
+                  "source-ba1ab91d-section-3-3-decode-token-block-1",
+                  "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-2",
+                  "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-3"
+                ],
+                "sample_range": [
+                  -3.0,
+                  3.0
+                ],
+                "trail_seconds": 2.0
+              }
+            ],
+            "phases": [
+              {
+                "focus": [
+                  "history-seq"
+                ],
+                "visible": [
+                  "history-seq",
+                  "current-dist"
+                ]
+              },
+              {
+                "focus": [
+                  "current-dist"
+                ],
+                "visible": [
+                  "history-seq",
+                  "current-dist"
+                ]
+              },
+              {
+                "focus": [
+                  "history-seq"
+                ],
+                "visible": [
+                  "history-seq",
+                  "current-dist"
+                ]
+              }
+            ],
+            "x_range": [
+              -5.0,
+              5.0
+            ],
+            "y_range": [
+              -4.0,
+              4.0
+            ]
+          },
+          "title": "",
+          "teaching_goal": "理解自回归生成循环",
+          "learning_question": "模型如何把预测出的token反馈回去，继续生成下一个？",
+          "visual_pattern": "flow",
+          "claims": [
+            {
+              "id": "feedback-loop-claim",
+              "text": "LLM将预测出的token拼接到prompt后面，再预测下一个，如此重复形成自回归生成。",
+              "source_refs": [
+                "source-47d4992f-section-overview-block-1",
+                "source-ba1ab91d-section-2-4-llm-block-7"
+              ]
+            },
+            {
+              "id": "prefill-decode-claim",
+              "text": "Prefill阶段并行处理输入token建立缓存，Decode阶段每次只生成一个新token并依赖历史状态。",
+              "source_refs": [
+                "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-2",
+                "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-3",
+                "source-ba1ab91d-section-3-3-decode-token-block-1"
+              ]
+            }
+          ],
+          "preset": "chain",
+          "attachment": {},
+          "thresholds": {},
+          "elements": [
+            {
+              "id": "history-seq",
+              "role": "node",
+              "label": "生成序列（历史+新token）",
+              "x": 320.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            },
+            {
+              "id": "current-dist",
+              "role": "node",
+              "label": "本轮预测概率",
+              "x": 640.0,
+              "y": 300.0,
+              "tone": "normal",
+              "props": {},
+              "binds": {},
+              "kind": "body",
+              "shape": "rect",
+              "width": 96.0,
+              "height": 48.0,
+              "sides": 6,
+              "inner_ratio": 1.0,
+              "heading": 0.0,
+              "glyph": null,
+              "path": [],
+              "duration": 0.0
+            }
+          ],
+          "steps": [
+            {
+              "id": "step-prefill",
+              "title": "初始输入",
+              "narration": "给定起始token，模型开始第一轮预测，输出第一个新token并追加到序列。",
+              "highlights": [
+                "history-seq"
+              ],
+              "states": {},
+              "source_refs": [
+                "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-2"
+              ]
+            },
+            {
+              "id": "step-decode-1",
+              "title": "第二轮预测",
+              "narration": "模型根据当前序列状态预测概率分布，选择下一个token，生成结果成为下一步的输入。",
+              "highlights": [
+                "current-dist",
+                "history-seq"
+              ],
+              "states": {},
+              "source_refs": [
+                "source-47d4992f-section-overview-block-1",
+                "source-ba1ab91d-section-2-4-llm-block-7"
+              ]
+            },
+            {
+              "id": "step-decode-2",
+              "title": "循环继续",
+              "narration": "上一轮算出的 token 成为下一轮输入，序列继续增长。此简化模型只使用最后一个 token；真实 LLM 会利用可见上下文，而不是只看最后一个 token。",
+              "highlights": [
+                "history-seq"
+              ],
+              "states": {},
+              "source_refs": [
+                "source-ba1ab91d-section-3-3-decode-token-block-1",
+                "source-ba1ab91d-section-3-llm-tokenization-prefill-decode-block-3"
+              ]
+            }
+          ],
+          "controls": [
+            {
+              "id": "program-seed-token",
+              "type": "slider",
+              "label": "起始token",
+              "target_property": "autoregressive-loop-program.seed-token",
+              "min": 0.0,
+              "max": 2.0,
+              "default": 0.0,
+              "step": 1.0,
+              "unit": "",
+              "action": null
+            }
+          ],
+          "params": {}
+        }
+      }
+    ]
+  }
+}

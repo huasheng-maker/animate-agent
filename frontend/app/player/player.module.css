@@ -28,7 +28,7 @@
 .beatActions button:hover, .controls button:hover { border-color: var(--line-hot); }
 .beatActions button:disabled { cursor: not-allowed; opacity: .4; }
 .beatActions .replay { color: #050507; background: var(--line-hot); }
-.layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; padding: 14px; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; align-items: start; gap: 14px; padding: 14px; }
 .playerPanel { min-width: 0; overflow: hidden; border: 1px solid var(--line); background: #050507; box-shadow: 0 0 42px rgba(204,255,0,.08); }
 .frameStatus { padding: 9px 12px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .sidebar { display: flex; flex-direction: column; gap: 12px; min-width: 0; }

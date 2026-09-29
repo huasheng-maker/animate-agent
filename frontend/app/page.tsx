@@ -413,7 +413,7 @@ export default function Home() {
           <span className="pipeline-clock">{workflow.document ? `${graph.nodes.length} NODES` : "READY 00:00"}</span>
         </div>
         <div className="topbar-actions">
-          <a className="model-badge" href="/demos/lidar">雷达绕障实验</a>
+          <a className="model-badge" href="/demos">体验三个动画实验 ↗</a>
           <span className="model-badge">IR / RENDER 01</span>
           <button className="icon-button inspector-toggle" onClick={() => setInspectorOpen(true)} type="button" aria-label="Open inspector"><Icon name="grid" /></button>
           <button className="top-generate" disabled={busy || generating || !workflow.hasInput} onClick={workflow.generateAnimation} type="button">

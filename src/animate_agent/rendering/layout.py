@@ -1435,6 +1435,13 @@ def _mechanism_controls(scene: StoryboardScene) -> list[RenderControl]:
     plan = scene.mechanism
     if plan is None:
         return [_to_control(control) for control in scene.controls]
+    if plan.kind == "composition":
+        return [RenderControl(
+            id=f"program-{node.id}", type="slider", label=node.label or node.id,
+            target_property=f"{scene.id}-program.{node.id}", min=node.min, max=node.max,
+            default=float(node.value) if isinstance(node.value, (float, int)) else 0,
+            step=node.step,
+        ) for node in plan.nodes if node.op == "parameter"]
     if plan.kind == "language_model":
         name, label, low, high, value = "temperature", "采样温度", .1, 2., plan.temperature
     elif plan.kind == "neural_network":
@@ -1461,7 +1468,14 @@ def layout_scene(scene: StoryboardScene, *, stage: RenderStage | None = None) ->
     stops matching the teaching order, for no gain.
     """
     stage = stage or RenderStage()
-    boxes = _place(scene, stage)
+    # Composition owns geometry; these slots only retain semantic object identities.
+    if scene.mechanism is not None and scene.mechanism.kind == "composition":
+        boxes = {obj.id: _Box(
+            stage.width * (index + 1) / (len(scene.objects) + 1),
+            stage.height / 2, 80, 50,
+        ) for index, obj in enumerate(scene.objects)}
+    else:
+        boxes = _place(scene, stage)
     links = _link_points(scene, boxes)
     elements: list[RenderElement] = []
     for obj in scene.objects:

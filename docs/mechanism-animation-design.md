@@ -1,6 +1,6 @@
 # Computed mechanism animations
 
-Status: implemented and locally verified for the bounded capabilities below. Existing generic storyboards remain compatible; previously saved movies are not automatically regenerated.
+Status: the sections below describe the legacy adapters. New generation uses the composable registry described in [element-registry.md](element-registry.md). Existing generic storyboards remain compatible; previously saved movies are not automatically regenerated.
 
 ## Research (2026-09-23)
 
@@ -44,3 +44,11 @@ Numbers are explicitly labeled illustrative. Model-authored prose must still cit
 To exercise the new generation path, restart the backend/frontend if they do not hot-reload, then generate a new movie, e.g. `How does LLM work?`, `神经网络的工作原理`, `线性变换如何改变平面？`, `导数与割线、切线有什么关系？`, or `TCP 三次握手发生了什么？`.
 
 To extend a capability, add a bounded plan variant and catalog example, a deterministic computation and Canvas adapter, consumed scene-scoped controls, plus numerical/compile/browser checks. Do not route an unsupported topic to an unrelated demonstration merely because it shares a broad subject label.
+
+## Live-generation gap corrected (2026-09-29)
+
+Run `7b00979250c1450394feb5a2ae6d48a3` asked `How does Large-language-Model work?` but all three saved scenes had `mechanism: null`. The running API exposed the new mechanism schema. The deterministic intent guard missed hyphenated wording, so an otherwise valid generic storyboard was accepted even though the system prompt offered mechanisms.
+
+Capability matching now normalizes Unicode, separators and whitespace while preserving the original question. Query and lesson prompts explicitly name the required mechanism before generation. The query JSON example no longer advertises invalid `state` properties on body primitives; the run's first rejected output contained 22 such property errors.
+
+Read-only revalidation of the real saved storyboard now reports `mechanism_required`. Regression tests exercise equivalent spellings, prompt requirements, rejection/repair into a compiled mechanism, and unsupported-topic non-routing. Current local suite: 108 tests passed; strict mypy: 73 source files. No paid regeneration was performed and the existing saved run was not modified. Earlier browser screenshots demonstrate the renderer with offline plans, not guaranteed live-provider compliance. Circular motion is still outside the initial five mechanism kinds.

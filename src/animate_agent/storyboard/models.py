@@ -157,7 +157,7 @@ class StoryboardScene(BaseModel):
     # Which LessonIR scenes this storyboard scene covers. 1~2, and the union
     # across all scenes must cover every LessonScene.
     lesson_scene_ids: list[str] = Field(default_factory=list, max_length=2)
-    objects: list[StoryboardObject] = Field(min_length=1, max_length=12)
+    objects: list[StoryboardObject] = Field(default_factory=list, max_length=12)
     steps: list[StoryboardStep] = Field(min_length=1, max_length=12)
     controls: list[StoryboardControl] = Field(default_factory=list, max_length=6)
     params: dict[str, PropValue] = Field(default_factory=dict)
@@ -171,6 +171,13 @@ class StoryboardScene(BaseModel):
                 raise ValueError("mechanism.phases must correspond one-to-one to scene.steps")
             if self.controls:
                 raise ValueError("mechanism controls are supplied by the compiler; use controls=[]")
+            if self.mechanism.kind == "composition":
+                self.scene_type = "chain"
+                self.objects = [StoryboardObject(
+                    id=view.id, role="node", label=view.label, source_refs=view.source_refs,
+                ) for view in self.mechanism.visuals]
+        if not self.objects:
+            raise ValueError("scene must have objects or a composition with visuals")
         return self
 
 

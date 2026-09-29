@@ -102,7 +102,7 @@ export default function PlayerPage() {
     <main className={styles.shell}>
       <header className={styles.header}>
         <div>
-          <div className={styles.brand}>ANIMATE/AGENT <em>REMOTION PLAYER</em></div>
+          <div className={styles.brand}><a href="/demos" style={{color:"inherit",textDecoration:"none"}}>ANIMATE/AGENT</a> <em>知识实验室</em></div>
           <p className={styles.eyebrow}>{movie.spec.eyebrow || movie.spec.subject}</p>
           <h1>{movie.spec.title || "Knowledge Movie"}</h1>
           <p className={styles.goal}>{active.renderScene.teaching_goal || ""}</p>

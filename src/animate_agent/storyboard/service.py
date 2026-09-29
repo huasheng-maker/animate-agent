@@ -18,11 +18,12 @@ from animate_agent.storyboard.validation import StoryboardLimits
 DEFAULT_GENERATED_DIR = GENERATED_DIR
 
 
-def build_limits() -> StoryboardLimits:
+def build_limits(*, require_composition: bool = True) -> StoryboardLimits:
     """Read the storyboard thresholds from the YAML config."""
     storyboard_settings = load_storyboard_settings()
     animation_settings = load_animation_settings()
     return StoryboardLimits(
+        require_composition=require_composition,
         min_steps=storyboard_settings.min_storyboard_steps,
         max_steps=storyboard_settings.max_storyboard_steps,
         require_visual_objects=storyboard_settings.require_visual_objects,

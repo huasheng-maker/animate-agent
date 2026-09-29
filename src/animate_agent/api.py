@@ -291,7 +291,7 @@ def preview_animation_example(example_id: str) -> RenderSpec:
 
     source = _example_path(EXAMPLE_STORYBOARDS, example_id)
     storyboard = StoryboardIR.model_validate_json(source.read_text(encoding="utf-8"))
-    issues = validate_storyboard(storyboard, limits=build_limits())
+    issues = validate_storyboard(storyboard, limits=build_limits(require_composition=False))
     if issues:
         summary = "; ".join(f"{issue.where}: {issue.detail}" for issue in issues)
         raise HTTPException(status_code=500, detail=f"Invalid reviewed storyboard: {summary}")
