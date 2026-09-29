@@ -15,7 +15,7 @@ from pydantic import ValidationError
 from animate_agent.documents.models import DocumentIR
 from animate_agent.json_utils import extract_json_object
 from animate_agent.knowledge.models import LessonIR
-from animate_agent.llm import DEFAULT_MAX_TOKENS, LLMClient
+from animate_agent.llm import DEFAULT_MAX_TOKENS, LLMClient, LLMTruncatedError, retry_suffix
 from animate_agent.storyboard.models import StoryboardIR
 from animate_agent.storyboard.prompts import STORYBOARD_SYSTEM_PROMPT, build_storyboard_prompt
 from animate_agent.storyboard.validation import (
@@ -74,6 +74,7 @@ class StoryboardAgent:
         temperature: float = DEFAULT_TEMPERATURE,
         max_tokens: int = DEFAULT_MAX_TOKENS,
         debug_dir: Path | None = None,
+        script_mode: bool = False,
     ) -> None:
         self._llm = llm
         self._limits = limits
@@ -82,6 +83,12 @@ class StoryboardAgent:
         self._temperature = temperature
         self._max_tokens = max_tokens
         self._debug_dir = debug_dir
+        # Only the user prompt differs by mode — the caption may be reworded out
+        # of a document and may not be reworded out of a script. The length
+        # arithmetic is the same either way, which is why this does not reach
+        # `limits`: the film is held to one to two minutes whichever road it came
+        # down.
+        self._script_mode = script_mode
 
     def _dump_rejection(self, lesson: LessonIR, attempt: int, raw: str, reason: str) -> None:
         """Persist a rejected response *and the complaint that rejected it*.
@@ -105,32 +112,50 @@ class StoryboardAgent:
         (self._debug_dir / f"{stem}-error.txt").write_text(reason, encoding="utf-8")
 
     async def generate(self, lesson: LessonIR, document: DocumentIR) -> StoryboardIR:
-        user_prompt = build_storyboard_prompt(lesson, allowed_renderers=self._allowed_renderers)
+        user_prompt = build_storyboard_prompt(
+            lesson, allowed_renderers=self._allowed_renderers, script_mode=self._script_mode
+        )
         messages: list[dict[str, str]] = [
             {"role": "system", "content": STORYBOARD_SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
         ]
         last_error = ""
         for attempt in range(1, self._max_retries + 1):
-            raw = await self._llm.chat(
-                messages, temperature=self._temperature, max_tokens=self._max_tokens
-            )
+            raw = ""
             try:
+                raw = await self._llm.chat(
+                    messages,
+                    temperature=self._temperature,
+                    max_tokens=self._max_tokens,
+                    label="分镜层",
+                )
                 data = extract_json_object(raw)
                 return self._validate(lesson, document, data)
             except ValueError as exc:
+                # The `chat` call sits **inside** the `try` for a reason. A
+                # truncated response is a `ValueError` and is worth retrying, and
+                # it raises from `chat` — so a `try` that began after the call
+                # would let it escape the loop entirely, turning the one
+                # recoverable failure into a hard stop. `LLMBudgetExhaustedError`
+                # still escapes, as designed: it is a `RuntimeError`, and running
+                # the same budget again cannot make it fit.
                 last_error = str(exc)
-                self._dump_rejection(lesson, attempt, raw, last_error)
+                # A truncation raises before `raw` is assigned, and the partial
+                # body is the entire point of dumping it — so the exception
+                # carries the text that never reached this line.
+                self._dump_rejection(
+                    lesson,
+                    attempt,
+                    exc.partial if isinstance(exc, LLMTruncatedError) else raw,
+                    last_error,
+                )
                 messages = [
                     {"role": "system", "content": STORYBOARD_SYSTEM_PROMPT},
-                    {
-                        "role": "user",
-                        "content": (
-                            f"{user_prompt}\n\n"
-                            f"上一次输出校验失败：{last_error}\n"
-                            "请重新输出一个符合 schema 的完整 JSON 对象。"
-                        ),
-                    },
+                    # `retry_suffix` picks the wording from *why* the attempt
+                    # failed. A truncated body is not malformed, so the stock
+                    # "fix the schema" line aims the model at syntax that was
+                    # never wrong — and it truncates again, at full price.
+                    {"role": "user", "content": f"{user_prompt}\n\n{retry_suffix(exc)}"},
                 ]
         where = f"（模型原始输出与被拒理由已落盘到 {self._debug_dir}）" if self._debug_dir else ""
         raise ValueError(

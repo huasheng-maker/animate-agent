@@ -37,8 +37,9 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from animate_agent.rendering.registry import Glyph
 from animate_agent.storyboard.models import PropValue
 
 #: Bumped when a change would make an older player mis-draw a newer spec. The
@@ -49,6 +50,18 @@ SPEC_VERSION = 1
 #: Theme slot an element draws through. The player maps these to its
 #: `:root` variables, so changing the palette never touches a spec.
 Tone = Literal["normal", "accent", "danger", "muted", "success"]
+
+#: How an element arrives — and, run backwards, how it leaves.
+#:
+#: A word the model picks and the player resolves, the same arrangement `tone`
+#: and `emphasis` have. It is a *static* field rather than a live prop, and both
+#: halves of that are deliberate: it is a property of the thing (like `glyph` or
+#: `pivot`), and a beat able to change it could only change how something
+#: arrives *after* it had arrived.
+#:
+#: `registry.ENTER_NAMES` is the same five words and a test holds the two
+#: together; `frontend/player/entrance.js` is where they are implemented.
+EnterStyle = Literal["fade", "rise", "drop", "zoom", "wipe"]
 
 
 class _Model(BaseModel):
@@ -84,13 +97,31 @@ class _Element(_Model):
     #: matched on the property name would move both. Naming the binding here
     #: keeps that distinction in the spec instead of in a heuristic.
     binds: dict[str, str] = Field(default_factory=dict)
+    #: What this element looks like while it is arriving — and, being the same
+    #: function run backwards, while it is leaving.
+    #:
+    #: Read off the element rather than through `view.lookup`, which is what
+    #: keeps it out of `LIVE_PROPS` and out of a beat's `object_states`: it is
+    #: settled once, like `glyph`, and there is no meaningful reading of "start
+    #: dropping, you are already here".
+    enter: EnterStyle = "rise"
+
+
+#: Every shape a body can be drawn as.
+#:
+#: Four values, and the vocabulary offers three of them: `capsule` is drawn as a
+#: rounded rect because the player has no branch for it, so it is a name that
+#: draws something else. It stays legal here because a spec that already says it
+#: keeps drawing — `registry.SHAPE_NAMES` is the subset the model is told about,
+#: and a test holds the one inside the other.
+BodyShape = Literal["rect", "circle", "polygon", "capsule"]
 
 
 class BodyElement(_Element):
     """A solid object. `glyph` names a T2 glyph; without one, `shape` is drawn."""
 
     kind: Literal["body"] = "body"
-    shape: Literal["rect", "circle", "polygon", "capsule"] = "rect"
+    shape: BodyShape = "rect"
     width: float = Field(default=0.0, ge=0)
     height: float = Field(default=0.0, ge=0)
     #: Vertex count for `shape: "polygon"`, ignored otherwise. `inner_ratio` below
@@ -102,6 +133,46 @@ class BodyElement(_Element):
     inner_ratio: float = Field(default=1.0, gt=0, le=1)
     #: Degrees, clockwise from +x. The car and its lidar fan share it.
     heading: float = 0.0
+    #: The point `heading` turns this body about, in the body's own local frame:
+    #: `(0, 0)` is the centre of the shape and `+y` points down.
+    #:
+    #: `(0, 0)` is not a sentinel — it is a real and common answer, and it is what
+    #: every body did before this field existed. A car turns about its middle and
+    #: looks right doing it. An `arm` turns about its shoulder instead, and that
+    #: difference is the whole of what this carries.
+    #:
+    #: Measured against **what the body draws**, not against `width`/`height`.
+    #: Those two differ whenever a glyph is involved — the player fits the glyph's
+    #: ink into the box and centres it, so a box taller than the ink leaves space
+    #: above and below. Layout answers this with `_drawn_size`, and the field
+    #: carries the result rather than the recipe.
+    #:
+    #: Baked by layout from the object's role, never read from `props`: see
+    #: `_BODY_PIVOTS` in `layout.py` for why a hinge is the code's decision rather
+    #: than a coordinate the model gets to write.
+    pivot: tuple[float, float] = (0.0, 0.0)
+    #: Where this body's `label` goes: the y offset of the text's middle from the
+    #: body's centre, positive downwards, at `scale` 1.
+    #:
+    #: The same measurement `pivot` above makes and for the same reason — it is
+    #: against **what the body draws**, so a glyph whose ink is squarer than its
+    #: box gets its name tucked under the drawing rather than under the box.
+    #:
+    #: It used to be the player's own arithmetic, and the player worked the
+    #: half-extent out as `max(width, height) / 2`: the radius of the box's
+    #: circumscribed circle, which is not where a shape ends. A `hub`'s leaf is
+    #: 84x44, so its name was written 33 units below a box that ends 22 below its
+    #: centre — and the leaf on the ring's floor sits on the frame's floor by
+    #: construction, which put the name 13 units *inside* the caption's strip.
+    #: The caption plate is painted after every element, so 「Java」 was simply
+    #: gone. Baking it here fixes the float, and it is also what lets `_check_fit`
+    #: count the name at all — that half had never existed.
+    #:
+    #: `None` means no layout baked it: a hand-written spec, or one written
+    #: before this field did. The player has a fallback for those, and it is the
+    #: old arithmetic — right for a square body, wrong for a wide one, and never
+    #: `NaN`.
+    label_dy: float | None = None
     glyph: str | None = None
     #: Where this body goes during playback, when the preset gave it a path.
     #:
@@ -252,11 +323,15 @@ class WaveElement(_Element):
 
 
 class ReadoutElement(_Element):
-    """A text panel.
+    """A text panel. Retired — see `registry.Primitive.retired`.
 
-    `text` is drawn with `fillText`/`textContent` and never parsed. A formula
-    reaches this field already turned into geometry at build time, not as an
-    executable string (decision D4).
+    `text` is drawn with `fillText`/`textContent` and never parsed. The rest of
+    this docstring used to say a formula *arrives* here "already turned into
+    geometry at build time". There is no such pass: `drawReadout` splits the
+    string on newlines and draws each line. Nothing downstream depended on the
+    claim, and that is what made it expensive rather than harmless — it was
+    quoted, correctly-sounding, as the reason a formula could not go in a bubble.
+    `NoteElement` below is where formulas go now, and it draws them the same way.
     """
 
     kind: Literal["readout"] = "readout"
@@ -264,6 +339,412 @@ class ReadoutElement(_Element):
     width: float = Field(default=0.0, ge=0)
     height: float = Field(default=0.0, ge=0)
     align: Literal["left", "center", "right"] = "left"
+
+
+class NoteElement(_Element):
+    """A few words with no box: no background, no border, no tail.
+
+    The whole of what separates this from `ReadoutElement` is the chrome, and
+    the chrome is what the JSON lesson's nine scenes showed too much of — a panel
+    in a fixed right-hand column is the one drawing here that is always there
+    once asked for, so a scene pays for it whether or not it has anything to say.
+
+    **Position is one expression for both placements.** `x`/`y` is the anchor's
+    centre when there is one and a stage coordinate when there is not, and in
+    both cases the words are drawn at `(x + dx, y + dy)`. `dx`/`dy` is zero for
+    an unanchored note, so the drawer needs no branch — and the attachment pass
+    in `behaviors.js` skips it for free, because a note with no `of` is not in
+    `RenderScene.attachment`.
+
+    That is the same convention `BubbleElement` has and *not* the one
+    `VerdictElement` has, deliberately: a verdict bakes its corner and is
+    nevertheless overwritten to the subject's centre, which is the defect
+    `test_a_bubble_is_mounted_on_its_anchor` exists to catch. A boxless line of
+    words laid over the middle of the thing it describes would read as a caption
+    for the object rather than a note beside it.
+
+    `lines` is a table keyed by the source string, for `BubbleElement.lines`'
+    reason exactly: `text` is live, so a beat may rewrite it, and the wrapping
+    that decides how wide the note is has to be one measurement rather than two.
+    """
+
+    kind: Literal["note"] = "note"
+    text: str = ""
+    #: Source string -> the lines it was wrapped into.
+    lines: dict[str, list[str]] = Field(default_factory=dict)
+    width: float = Field(default=0.0, ge=0)
+    height: float = Field(default=0.0, ge=0)
+    #: The words' centre, relative to the anchor's centre. `(0, 0)` for a note
+    #: that stands on its own.
+    dx: float = 0.0
+    dy: float = 0.0
+    #: The object this note belongs to, or `None` when it belongs to the scene.
+    #: Kept so the note follows its subject — and so the attachment pass, which
+    #: keys on exactly this field, picks up the anchored ones and passes over
+    #: the rest.
+    anchor: str | None = None
+
+
+class VerdictElement(_Element):
+    """A ✓ / ✗ / ! pinned through another object's corner.
+
+    `mark` is a **word**, not a shape. `registry.py` prints the three legal names
+    into the vocabulary and `validation.py` refuses any other, so by the time a
+    spec exists the value is one of three and the drawer's job is to turn it into
+    a colour and a glyph. That is the arrangement `tone` already has, and it is
+    here for the same reason: a name the drawer cannot place would otherwise
+    degrade quietly into a mark that reads as deliberate.
+
+    `glyphs` is a table for the same reason `CardElement.tags` is one, and the
+    mistake it prevents was caught by `player_smoke.mjs` on the first fixture
+    that flipped a mark mid-scene. `mark` is live, so a beat may turn a 存疑 into
+    a 通过 — and a single `glyph` field baked from the *declared* mark then draws
+    a warning triangle inside a badge the drawer has just coloured green. The
+    spec would not contain `check` at all, so the player could not have drawn it
+    even if it had asked. Only the marks some beat can reach are in here.
+
+    A mark with no glyph data (a half-installed checkout) is simply absent from
+    the table, which leaves the badge drawn as a bare disc in that mark's colour.
+
+    `label_side` and `label_width` are baked for the reason `readout.align` is:
+    they are positions, and positions are the layout's business (decision D3).
+    """
+
+    kind: Literal["verdict"] = "verdict"
+    mark: str = "warn"
+    text: str = ""
+    size: float = Field(default=0.0, ge=0)
+    glyphs: dict[str, str] = Field(default_factory=dict)
+    label_width: float = Field(default=0.0, ge=0)
+    label_side: Literal["right", "left", "below"] = "right"
+    #: The badge's centre in the anchor's frame: `(0, 0)` is the anchor's centre.
+    #:
+    #: `x`/`y` is the anchor's centre, not the corner the badge is pinned to —
+    #: the convention `BubbleElement` spells out and the one the attachment pass
+    #: actually enforces. `behaviors.js` writes the parent's `x`/`y` into every
+    #: mounted child on every frame, so a baked absolute corner is dead data, and
+    #: this element carried exactly that: the badge has always been drawn at its
+    #: target's centre, up to 40 pixels from where `_to_verdict` put it. Over a
+    #: 64x48 body nobody noticed. Over a `compare` lead at 132x99 it is 82, which
+    #: is the badge sitting in the middle of the thing it is judging.
+    dx: float = 0.0
+    dy: float = 0.0
+    #: The object this mark judges. Kept so the badge follows a body that moves
+    #: during playback, exactly as an emitter's or a vector's does.
+    anchor: str | None = None
+
+
+class BubbleElement(_Element):
+    """A rounded box of words, hanging off the object its tail points at.
+
+    **Mounted like an emitter, not positioned like a verdict.** `x`/`y` is the
+    *anchor's centre* — the same thing `EmitterElement.x` is — and the bubble's
+    own geometry is `dx`/`dy` plus `tail`, baked in the anchor's frame. One
+    assignment in `behaviors.js`'s attachment pass then moves the box and the
+    tail together, which is what keeps a callout pointing at a car that drives
+    away instead of standing where the car started.
+
+    The precedent it does *not* follow is `verdict`, which bakes its own corner
+    and carries an `anchor` as well. Those two disagree: the attachment pass
+    writes `child.x = parent.x; child.y = parent.y` unconditionally, for every
+    element in the scene, so a badge laid out above-right of its subject is drawn
+    at that subject's *centre* during playback and the baked corner is never
+    read. Over a 38-pixel disc nobody notices. Over a box of words it would put
+    the callout on top of the thing it is annotating.
+
+    `lines` is a **table keyed by the string**, not one wrapped block, and it is
+    the arrangement `CardElement.tags` and `VerdictElement.glyphs` already have.
+    `text` is live, so a beat may rewrite it; the wrapping that decides the box's
+    size is a layout-time measurement (decision D3). A single baked block would
+    freeze the bubble's words for the whole scene; wrapping in the drawer would
+    make the box layout cut and the text the player draws two independent
+    estimates of one measurement that disagree by a line and draw out of the
+    bottom with nothing anywhere to notice. Only the strings a beat can reach are
+    in here — and the box is cut for the *tallest* of them, so a beat that says
+    something shorter sits centred rather than at the top.
+
+    `tail` is three points in the anchor's frame — the apex, and the two ends of
+    its base — baked rather than derived, for `VerdictElement.label_side`'s
+    reason: which side it hangs on and where its base meets the box are
+    positions, and the drawer must not re-derive them from a box whose size came
+    out of a text estimate.
+    """
+
+    kind: Literal["bubble"] = "bubble"
+    text: str = ""
+    #: Source string -> the lines it was wrapped into. Sized by the lesson, not
+    #: by the language: two estimators of one measurement is the defect.
+    lines: dict[str, list[str]] = Field(default_factory=dict)
+    width: float = Field(default=0.0, ge=0)
+    height: float = Field(default=0.0, ge=0)
+    #: The body's centre in the anchor's frame: `(0, 0)` is the anchor's centre.
+    dx: float = 0.0
+    dy: float = 0.0
+    #: Apex, base, base — in the anchor's frame. Empty means no tail was cut.
+    tail: list[RenderPoint] = Field(default_factory=list)
+    #: The object the tail points at. Kept so the bubble follows it.
+    anchor: str | None = None
+
+
+class OrdinalElement(_Element):
+    """A numbered disc pinned to another object's corner.
+
+    **Mounted, like `bubble` — not positioned, like `verdict` used to be.** `x`/
+    `y` is the *anchor's centre* and the dot's own place is `dx`/`dy` in that
+    frame, which is what `behaviors.js`'s attachment pass actually enforces: it
+    writes the parent's `x`/`y` into every mounted child on every frame, so a
+    baked absolute position is data nothing reads. `verdict` carried one for as
+    long as its target was small enough to hide the difference; the comment on
+    `VerdictElement.dx` has the numbers. A numbered dot copying that arrangement
+    would sit in the middle of the thing it numbers — the one place a step badge
+    is least useful, since the glyph underneath it is what the number refers to.
+
+    `n` is a field rather than a live prop, so nothing here is read through
+    `view.lookup`: the drawer takes the number straight off the element. That is
+    not a shortcut — it is the whole shape of the primitive. A step number is a
+    fact about the object and does not change during a scene, and a beat points
+    at step 3 by highlighting the dot rather than by rewriting it. Were it ever
+    to change, it would be a prop, a `live_props` entry, a mirror, a lookup and
+    two tests; keeping it out is what makes this the first primitive with **no**
+    live props at all.
+    """
+
+    kind: Literal["ordinal"] = "ordinal"
+    #: The step this dot claims. `validation.py` holds it to `ORDINAL_MIN`..
+    #: `ORDINAL_MAX` and refuses two dots in one scene claiming the same step,
+    #: so by the time a spec exists the number is legal and unique.
+    n: int = 1
+    size: float = Field(default=0.0, ge=0)
+    #: The disc's centre in the anchor's frame: `(0, 0)` is the anchor's centre.
+    dx: float = 0.0
+    dy: float = 0.0
+    #: The object this dot numbers. Kept so the dot follows it.
+    anchor: str | None = None
+
+
+class CardTag(_Model):
+    """One type as a card draws it: the words, and the pill that holds them.
+
+    Baked per type rather than derived at draw time because both halves are
+    decided above the player. The words are the glossary in `registry.py` — a
+    fact about the vocabulary, not about this card — and the width is a text
+    measurement, which in this project is the layout's business. `drawReadout`
+    reading `element.width` instead of calling `measureText` is the precedent.
+    """
+
+    text: str = ""
+    width: float = Field(default=0.0, ge=0)
+
+
+class CardElement(_Element):
+    """One value set large, with the type it is an example of beneath it.
+
+    `text` and `type` are both live, so a beat can rewrite either — which is the
+    teaching move this primitive is for ("同一个位置，换一个值"). That is why
+    `tags` is a table rather than a single pair of fields: a beat that sets
+    `type: "boolean"` needs the words and the pill for *that* type, and there is
+    nowhere in the player to derive them from. Only the types some beat can
+    actually write are in here, so the table is the size of the lesson rather
+    than six entries times every card.
+
+    `value_type` is the name the model wrote, kept because the tag's *colour* is
+    keyed on the name while its words come out of `tags` — the glossary lives in
+    `registry.py` and the palette in the theme, which is the same split `tone`
+    has.
+    """
+
+    kind: Literal["card"] = "card"
+    text: str = ""
+    value_type: str = ""
+    tags: dict[str, CardTag] = Field(default_factory=dict)
+    width: float = Field(default=0.0, ge=0)
+    height: float = Field(default=0.0, ge=0)
+
+
+class EntryElement(_Element):
+    """One of several peers: a mark and a name, and nothing else.
+
+    The picture for 「它常用于 A、B、C、D、E」 — a list whose members each have a
+    name and no order between them. It is deliberately the smallest thing that
+    can carry a name: no value, no type, no body. That is what keeps it usable
+    for subjects `card` cannot hold, since `CardElement` requires a `type` and
+    most peers have none to name.
+
+    `text` is live, so a beat can rename an entry ("and this one is what we call
+    a schema") — the same teaching move `CardElement.text` exists for. `icon` is
+    **not**: a mark says what this entry *is*, and that does not change from beat
+    to beat. See `Primitive.live_props` in `registry.py` for why a prop is left
+    out rather than declared and ignored.
+
+    `icon` is a **name**, resolved by the player against `RenderSpec.glyphs` the
+    way `body.glyph` and `TreeLine.icon` are — see
+    `_a_named_glyph_must_travel_with_the_spec` below, which is the gate that
+    makes the name mean something on the canvas.
+
+    `width`/`height` are the tile layout cut, not the mark's size: the drawer
+    centres the mark in a fixed slot of the tile so a glyph whose ink is taller
+    than its neighbours cannot shift the name beside it.
+    """
+
+    kind: Literal["entry"] = "entry"
+    text: str = ""
+    icon: str = ""
+    width: float = Field(default=0.0, ge=0)
+    height: float = Field(default=0.0, ge=0)
+
+
+#: What a tree node's value *looks like*, for the one purpose of choosing a
+#: colour. Named rather than inlined so `layout._value_kind` can be annotated
+#: with it — a function that sniffs a type and returns `str` is a function the
+#: type checker cannot tell from one that returns anything at all.
+TreeValueKind = Literal["string", "number", "literal", "text"]
+
+
+class TreeLine(_Model):
+    """One row of a `tree`: how deep it sits, and what it says.
+
+    `prefix` holds the key **with its separator**, so the drawer places the value
+    without measuring anything: it draws `prefix`, then `text` at the width
+    `prefix` came out. That is the arrangement `CardTag.width` and
+    `ReadoutElement.width` already have — a text measurement is the layout's
+    business (decision D3) — and it is why the colon is baked into the string
+    rather than reconstructed on the canvas, where `": "` would have to come out
+    the same width in two different languages.
+
+    `value_kind` is the *sniffed* type of `text` — `"20"` is a number, `"\\"x\\""` a
+    string — and it is baked for the reason `CardElement.tags` is: the drawer is
+    handed a name and looks up a colour, and the words a person would read the
+    kind from are on the canvas, not in a parser. It is a hint and never a claim:
+    a JSON tree is text a lesson wrote, not a document anyone validated.
+
+    `depth` is what every form reads. Which node is under which is carried by
+    indentation, so a row that lost its depth would still draw every character it
+    has and stop being a picture of a hierarchy.
+
+    `icon` is a **name**, resolved by the player against `RenderSpec.glyphs` the
+    way `body.glyph` is, and it is written by the model *inside* `text` — see
+    `registry.TREE_ICONS` for the syntax and for why a separate per-row list
+    would have been worse.
+
+    `x` and `y` are where the row draws, as an offset from the panel's text
+    origin, and they are baked for **every** form. Two of the five need it and
+    the other three would be fine without it, but one rule for all five is one
+    rule to keep: a form that computed its own positions in the drawer would be
+    the second place the geometry lives, and the two would part company the first
+    time a constant moved. `None` means the spec was written before the fields
+    existed, and the drawer falls back to the outline's own rule — `depth *
+    TREE_INDENT` across, `index * TREE_LINE_HEIGHT` down — which is exactly what
+    those specs were drawn with.
+    """
+
+    depth: int = Field(default=0, ge=0)
+    prefix: str = ""
+    text: str = ""
+    value_kind: TreeValueKind = "text"
+    icon: str = ""
+    x: float | None = None
+    y: float | None = None
+
+
+#: How a `tree` arranges its rows. The closed set is `registry.TREE_FORMS`,
+#: written out here rather than unpacked so the annotation is readable — and held
+#: equal to it by `test_render_block.py`, the way `CodeKind` is held to
+#: `registry.CODE_KINDS`.
+TreeForm = Literal["outline", "branch", "brace"]
+
+
+class TreeElement(_Element):
+    """A nested structure, drawn in whichever of the three forms fits it.
+
+    **Both axes are bounded, and that is the design constraint rather than a
+    preference.** The stage is 960 x 600 and the frame a block may occupy is
+    narrower than that, so a form whose width grows with the number of *leaves*
+    is a form that eventually cannot be rendered at all — and the failure would
+    arrive after the last model call, which is the worst possible time to learn
+    it. Every form here therefore puts **siblings on `y` and depth on `x`**:
+    width is a function of how deep the content goes, never of how much of it
+    there is.
+
+    An earlier version of this docstring said a tidy tree's width grows with its
+    leaves and that six of them is the whole stage. That measurement is right for
+    one way of drawing a tidy tree and wrong for the other, and the difference is
+    worth keeping: spreading the leaves across the available width is a choice,
+    not a property of tree diagrams. Put each *depth* at a fixed x instead and a
+    chain of eight nodes costs one row rather than eight, which is the case the
+    outline is worst at.
+
+    `form` is settled here rather than by the drawer for the reason `code`'s
+    `language` is: it changes the geometry, and geometry is baked. It is static —
+    a beat cannot change it — because every form decides the panel's size
+    differently, and a box cut for one form cannot hold another.
+
+    The three, what each is for, and why the other two were withdrawn, are argued
+    in `registry.TREE_FORMS`.
+    """
+
+    kind: Literal["tree"] = "tree"
+    form: TreeForm = "outline"
+    lines: list[TreeLine] = Field(default_factory=list)
+    #: The rows to emphasise, verbatim from the prop (`"3"`, `"2-4"`). Live, so a
+    #: beat can walk a lesson down a structure one node at a time; parsed by the
+    #: drawer, because a range is data and parsing four characters is not
+    #: executing code (decision D4 is about the latter).
+    #:
+    #: **Always `""` in a spec `layout.py` wrote**, and that is the rule rather
+    #: than a gap: `focus` is a gesture, so only a beat may supply it — through
+    #: `steps[].states`, which the player resolves ahead of this field
+    #: (`player.js`'s `makeLookup`, tier 2). It stays here as the drawer's
+    #: fallback so that a spec built by hand still draws. See `_props_for` for
+    #: what an object-level `focus` used to do instead.
+    focus: str = ""
+    width: float = Field(default=0.0, ge=0)
+    height: float = Field(default=0.0, ge=0)
+
+
+#: What one span of code *is*. The closed set is `registry.CODE_KINDS`, written
+#: out here rather than unpacked so the annotation is readable — and held equal to
+#: the registry's list by a test, the same arrangement `Tone` and `TONE_GLOSSES`
+#: have. `text`, `name` and `operator` are deliberately three names for what the
+#: drawer colours the same way: they are different *facts* (whitespace between
+#: tokens, an identifier, punctuation) and one *appearance*.
+CodeKind = Literal[
+    "text", "name", "keyword", "builtin", "string", "number", "comment", "operator", "literal"
+]
+
+
+class CodeSpan(_Model):
+    """A run of characters in one code line that shares a colour."""
+
+    text: str = ""
+    kind: CodeKind = "text"
+
+
+class CodeLine(_Model):
+    """One row of a `code` block. A line with no tokens is a blank one."""
+
+    spans: list[CodeSpan] = Field(default_factory=list)
+
+
+class CodeElement(_Element):
+    """A block of source, tokenised at build time and coloured at draw time.
+
+    The split is Shiki's — what the code *is* is decided once, above the player,
+    and the player turns names into colours. The alternative, shipping the source
+    and a tokeniser, would put a second implementation of the highlighting in
+    JavaScript and give the spec a string the player has to parse.
+    """
+
+    kind: Literal["code"] = "code"
+    lines: list[CodeLine] = Field(default_factory=list)
+    #: The name the model wrote, kept because the *colour* is keyed on it while
+    #: the choice of tokeniser was made above — the same split `CardElement.value_type`
+    #: has. Nothing in the drawer reads it today; it is here so a spec says which
+    #: language it was told it was, and so `player_smoke` can print it.
+    language: str = ""
+    #: Same rule as `TreeElement.focus` above, and the same reason.
+    focus: str = ""
+    width: float = Field(default=0.0, ge=0)
+    height: float = Field(default=0.0, ge=0)
 
 
 #: Discriminated on `kind`, so an unregistered one raises by name instead of
@@ -281,9 +762,46 @@ RenderElement = Annotated[
     | AngleElement
     | RegionElement
     | WaveElement
-    | ReadoutElement,
+    | ReadoutElement
+    | NoteElement
+    | VerdictElement
+    | BubbleElement
+    | OrdinalElement
+    | CardElement
+    | EntryElement
+    | TreeElement
+    | CodeElement,
     Field(discriminator="kind"),
 ]
+
+
+class RenderSpeech(_Model):
+    """One beat's voice track in one voice.
+
+    **`seconds` is measured, not derived.** It comes from the moment the last
+    word of the synthesis ends, plus the pause a beat gets after it speaks —
+    both read off the speech engine's own word-boundary events. The arithmetic
+    `layout.beat_duration` does from the character count is a good enough guess
+    to lay a film out with, and it is the only thing an unvoiced spec has, but
+    it is about a second short per beat: the clip opens with a little silence
+    and ends with a lot more, and a character count cannot see either.
+
+    That gap is why this is per voice rather than one number on the step. Two
+    voices read the same line at different speeds — measured, up to 0.55s apart
+    on a beat — so a step carrying both would have to pick the longer, and pay
+    that difference on every beat. Storing each voice's own length costs nothing
+    and is what `RenderStep.duration` defers to.
+
+    `src` is **relative to the spec** (`audio/<voice>/<hash>.mp3`), not a rooted
+    URL. `data/generated` is served under two different prefixes — `/specs` and
+    `/data` — so a spec that hardcoded one would 404 whenever it was written
+    somewhere else, which is exactly what `--output-dir` does. Same principle as
+    `RenderSpec.theme` carrying a name rather than a colour: what travels is the
+    part the spec owns, and where it is mounted stays the page's business.
+    """
+
+    src: str = ""
+    seconds: float = Field(default=0.0, ge=0)
 
 
 class RenderStep(_Model):
@@ -292,6 +810,34 @@ class RenderStep(_Model):
     id: str = Field(min_length=1)
     title: str = ""
     narration: str = ""
+    #: How long this beat holds before the player moves on, in seconds.
+    #:
+    #: `0.0` means **"no timing was declared"**, and it is the default because
+    #: every spec written before this field existed has to keep loading. The
+    #: player reads it as "sit on this beat and never move by yourself", which
+    #: is exactly what it did before — so an old file behaves like an old file
+    #: rather than silently acquiring a rhythm nobody chose for it.
+    #:
+    #: The layout layer fills it in (`layout.beat_duration`) from the
+    #: narration. Not from the model: `storyboard/prompts.py` forbids the
+    #: storyboard layer from writing 时长 in as many words, alongside 坐标 and
+    #: 颜色. A throw's flight time is derived down here for the same reason, and
+    #: a beat's length has the same shape of answer — the narration is what the
+    #: beat is *for*, so how long it takes to read is how long it needs.
+    #:
+    #: **With speech attached, this is a copy and `speech` is the source.** The
+    #: speech pass overwrites it with the measured length in the voice the film
+    #: was generated in, so a player that ignores `speech` entirely — an older
+    #: one, or the smoke harness — still walks the film at the right pace. The
+    #: two are the same number by construction, and both are rounded to 2dp so
+    #: that a spec stays byte-identical between runs.
+    duration: float = Field(default=0.0, ge=0)
+    #: Voice id -> that voice's track for this beat. Empty on every spec written
+    #: before there was any, which is what keeps those behaving exactly as they
+    #: did. The player prefers `speech[voice].seconds` over `duration` when it
+    #: has it, and falls back to `duration` when it does not — so "is there
+    #: audio" is a question about data, not about a flag.
+    speech: dict[str, RenderSpeech] = Field(default_factory=dict)
     highlights: list[str] = Field(default_factory=list)
     states: dict[str, dict[str, PropValue]] = Field(default_factory=dict)
 
@@ -368,5 +914,97 @@ class RenderSpec(_Model):
     title: str = ""
     subject: str = ""
     eyebrow: str = ""
+    #: Which palette the page opens in, as a `[data-theme]` id — or `""`, which is
+    #: "no opinion" and is what every spec written before this field existed says.
+    #:
+    #: A plain `str` and not a `Literal` over `registry.PALETTE_NAMES`, the way
+    #: `preset` above is: the names live in a stylesheet this file cannot read, and
+    #: the failure modes are not symmetric. A wrong `form` draws the wrong
+    #: structure and the spec has to be refused; a wrong theme draws the right
+    #: structure in the default colours, and `themes.js:resolveTheme` already
+    #: answers an id it does not offer with the default rather than with nothing.
+    #: Refusing the whole file over a colour is the worse trade.
+    #:
+    #: A *name* rather than a colour, which is the only reason it can be here at
+    #: all: the six palettes are `[data-theme]` blocks in `player.css`, so what
+    #: travels is a word and what it resolves to stays the page's business. See
+    #: `registry.PALETTES`.
+    theme: str = ""
+    #: Which voice the film was *generated* in — a voice id, or `""` for a spec
+    #: with no speech at all.
+    #:
+    #: Same shape of answer as `theme` above, and the same `str` rather than a
+    #: `Literal` over `speech.voices.VOICE_IDS`: `rendering` must not know which
+    #: voices exist. The dependency runs `speech` -> `rendering` and not back, so
+    #: the list lives in the layer that spends it, and the step's `speech` dict is
+    #: keyed by a plain string for the same reason.
+    #:
+    #: It is a **default, not a constraint**. The page opens on the URL's
+    #: `?voice=`, then this, then whatever the viewer chose last time — and a
+    #: viewer may switch to any voice the steps actually carry. There is
+    #: deliberately no `voices` list here: the player derives the offered set
+    #: from the steps themselves, and a second copy would be a second thing to
+    #: drift. (`glyphs` travels because the player *cannot* compute it; this it
+    #: can.)
+    voice: str = ""
     stage: RenderStage = Field(default_factory=RenderStage)
+    #: The glyph geometry the scenes below refer to, by name.
+    #:
+    #: Carried in the spec rather than fetched by the player, for the same reason
+    #: every other number is: the spec is the player's *only* input, and a spec
+    #: that draws differently depending on what else is on disk is not a contract.
+    #: It also keeps the player's fetch count at one, which is asserted.
+    #:
+    #: Only the glyphs this spec actually names are here — the other four in
+    #: `registry.T2_GLYPHS` are not copied into every file that does not use them.
+    glyphs: dict[str, Glyph] = Field(default_factory=dict)
     scenes: list[RenderScene] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _a_named_glyph_must_travel_with_the_spec(self) -> RenderSpec:
+        """A `body.glyph` with no geometry behind it is not a drawable spec.
+
+        Without this the player is handed a name it cannot resolve and has to
+        decide between throwing and drawing the plain shape — and both are worse
+        than a layout that refused to produce the file. This is the same shape as
+        `required_relations`: the failure is knowable here, so it is a failure
+        here, rather than something the next layer has to notice.
+
+        Three readers now, and the third is the one that would have gone
+        unnoticed. A missing `body.glyph` still draws a rounded rectangle and a
+        missing tree icon still draws the row, so both are at least *visible* as
+        something. An `entry.icon` with no geometry draws the tile — its panel,
+        its border, its name — with an empty slot where the mark goes, which
+        reads as a list that was never meant to have marks. The picture is
+        complete and wrong, which is the failure mode this project keeps finding
+        at the bottom of these.
+        """
+        named = {
+            element.glyph
+            for scene in self.scenes
+            for element in scene.elements
+            if isinstance(element, BodyElement) and element.glyph is not None
+        }
+        # A tree row's icon arrives the same way and fails the same way: the
+        # drawer holds a name and looks its geometry up, so a name with nothing
+        # behind it is a row marker that silently is not there.
+        named.update(
+            line.icon
+            for scene in self.scenes
+            for element in scene.elements
+            if isinstance(element, TreeElement)
+            for line in element.lines
+            if line.icon
+        )
+        # And an entry's mark, which is required rather than optional — so this
+        # is the only one of the three that a *correct* spec always carries.
+        named.update(
+            element.icon
+            for scene in self.scenes
+            for element in scene.elements
+            if isinstance(element, EntryElement) and element.icon
+        )
+        missing = sorted(named - set(self.glyphs))
+        if missing:
+            raise ValueError(f"这些字形被 spec 引用了，却没有带上它们的几何：{'、'.join(missing)}")
+        return self

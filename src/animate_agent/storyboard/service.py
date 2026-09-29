@@ -5,7 +5,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from animate_agent.config import load_animation_settings, load_storyboard_settings
+from animate_agent.config import (
+    load_animation_settings,
+    load_knowledge_settings,
+    load_storyboard_settings,
+)
 from animate_agent.documents.models import DocumentIR
 from animate_agent.knowledge.models import LessonIR
 from animate_agent.llm import LLMClient, load_llm_config
@@ -23,6 +27,8 @@ def build_limits() -> StoryboardLimits:
     return StoryboardLimits(
         min_steps=storyboard_settings.min_storyboard_steps,
         max_steps=storyboard_settings.max_storyboard_steps,
+        target_seconds=storyboard_settings.target_seconds,
+        target_band=storyboard_settings.target_band,
         require_visual_objects=storyboard_settings.require_visual_objects,
         require_interactive_demo=storyboard_settings.require_interactive_demo,
         allowed_renderers=animation_settings.allowed_renderers,
@@ -35,8 +41,15 @@ async def generate_storyboard(
     *,
     agent: StoryboardAgent | None = None,
     output_dir: Path = DEFAULT_GENERATED_DIR,
+    script_mode: bool | None = None,
 ) -> StoryboardIR:
-    """Run the Storyboard Agent over a LessonIR and persist the resulting StoryboardIR."""
+    """Run the Storyboard Agent over a LessonIR and persist the resulting StoryboardIR.
+
+    `script_mode` is passed through to the prompt and to nothing else: the caption
+    arithmetic and the film's ceiling are the same on both roads. What changes is
+    whether the model may reword the captions — it may for a document it is
+    compressing, and may not for a script somebody wrote to be read aloud.
+    """
     llm: LLMClient | None = None
     owns_client = False
     if agent is None:
@@ -50,6 +63,9 @@ async def generate_storyboard(
             max_retries=storyboard_settings.max_retries,
             temperature=storyboard_settings.temperature,
             debug_dir=output_dir,
+            script_mode=(
+                load_knowledge_settings().script_mode if script_mode is None else script_mode
+            ),
         )
         owns_client = True
     try:
