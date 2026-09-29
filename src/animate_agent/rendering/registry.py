@@ -290,7 +290,13 @@ T1_PRIMITIVES: tuple[Primitive, ...] = (
         "单独一个 `option` 没有意义。"
         "**`speed` 只在预设 `lane` 里有意义**：其余预设的 body 不靠它移动"
         "（`chain`/`hub`/`generic` 不动，`field` 是按抛物线飞），写了不会让画面变好，"
-        "只会让这个对象莫名其妙地飘出去",
+        "只会让这个对象莫名其妙地飘出去。"
+        "**别让它画成一个空框。**一个没写 `glyph` 的 body 就是一副圆角方框，"
+        "框里空空荡荡——它占着画面，却什么也没说。**凡是具体的东西**"
+        "（浏览器、服务器、路由器、一把锁），都从下面的字形清单里挑一个最接近的"
+        "填进 `glyph`，**不必最贴切，别不写**。实在挑不出、又不是实物的"
+        "（一个数字、一句话、一个结论），那就不是 body 该干的活——"
+        "改用 `entry`（一个图标 + 一个名字），或者更对得上的图元",
     ),
     Primitive(
         name="emitter",
@@ -324,7 +330,9 @@ T1_PRIMITIVES: tuple[Primitive, ...] = (
         relations=("from", "to"),
         required_relations=("from", "to"),
         live_props=("active", "visible", "emphasis"),
-        note="两个 body 之间的连线，虚线↔实线；两端都必填，否则这条线不存在",
+        note="两个 body 之间的连线，虚线↔实线；两端都必填，否则这条线不存在。"
+        "`active` 是逐拍可改的——讲到哪一段，哪一段的线就由虚变实："
+        "一条几站的路，用它在每一拍点亮一站，比让令牌走完全程可靠得多",
     ),
     Primitive(
         name="traveler",
@@ -344,6 +352,11 @@ T1_PRIMITIVES: tuple[Primitive, ...] = (
         # `wave`: a name in the prompt is a promise.
         note="沿 link 移动的小令牌；没有 along 就不知道它沿什么走，"
         "而 along **必须指向一个 link**（指向 trace 会让布局整单失败）。"
+        "**它只沿这一条线跑**：令牌整幕都在这条线的两头之间来回，换不了第二条。"
+        "所以「一路经过好几站」不能指望一个令牌走完——要么**一幕只讲一站**，"
+        "要么让**链路自己逐段亮起来**（`link` 的 `active` 是逐拍可改的，"
+        "讲到哪一段就点亮哪一段）。令牌停在半路、字幕说它已经到了终点，"
+        "是画面对不上话，而且校验台不会报错。"
         "state 是令牌上那行说明（待发布/已发布/已接收），节拍改它画面就变",
     ),
     Primitive(
@@ -593,6 +606,54 @@ T1_PRIMITIVES: tuple[Primitive, ...] = (
         required_props=("text", "type"),
         live_props=("text", "type", "visible", "emphasis"),
         note="值卡片：大字显示一个具体的值，下面挂一个类型标签；讲「这几种值有什么不同」时用它",
+    ),
+    # 并列条目 —— 「有几样，每样叫什么」的那张图。
+    #
+    # The picture this vocabulary was missing, and its absence showed twice. The
+    # JSON lesson's sixth scene is one sentence — 「它常用于 API 请求与响应、
+    # 前后端数据交换、软件配置、日志记录和轻量数据存储」 — five peers with nothing
+    # between them, and the model drew it as a `chain`: nodes strung on links, a
+    # token riding the first one. It did that in two consecutive runs, and
+    # `chain`'s note already said 「几样并列、没有先后的东西不要用 `chain`」 both
+    # times.
+    #
+    # The note was not the problem. `card` is the nearest picture here and it is
+    # not available: `text` and `type` are both required, for the reason its own
+    # comment gives, and 「API 请求与响应」 has no type to name. So there was
+    # nothing to reach for and the model took the only arrangement on offer that
+    # puts several things side by side — which is the one thing that asserts an
+    # order. A name is not enough to fix that; `tiles` below is the other half.
+    #
+    # 一个图标 + 一个名字, and the mark is what keeps this from being a `readout`
+    # in a box. `icon` is **required** for the same reason `card.type` is: an
+    # entry without its mark is not a worse entry, it is a different one — a word
+    # in a rectangle, which is exactly the picture this primitive exists to
+    # replace. An abstract subject takes the nearest icon rather than none;
+    # `TREE_ICONS` is the closed set and `_prop_hint` prints every gloss, so the
+    # model can see what it is choosing from.
+    #
+    # `icon` is **static**, unlike `card.type`. A mark says what this entry *is*,
+    # and that does not change from beat to beat. Declaring it live would buy a
+    # `lookup` in the drawer that no storyboard would ever take, which is the
+    # failure `live_props` describes read backwards.
+    Primitive(
+        name="entry",
+        roles=("item",),
+        props=("text", "icon", "visible", "emphasis", "enter"),
+        relations=(),
+        required_props=("text", "icon"),
+        live_props=("text", "visible", "emphasis"),
+        note=(
+            "条目：**一个图标 + 一个名字**，几条排成一排，放不下就换行。"
+            "`text` 是这一条的名字，**不是一句话**——一条超过十来个字，"
+            "该改用 `readout` 的面板或 `generic` 的竖排。"
+            "`icon` 从它的属性行上那份字形清单里挑最接近的一个，"
+            "**抽象的说法就用近似的顶上去**（「配置」用 `gear`、「日志」用 "
+            "`clipboard-list`、「存储」用 `database`、「和外界怎么打交道」用 `network`），"
+            "想不出最贴切的就挑一个不冲突的，**别不写**——"
+            "没有图标的条目就是一个框里一个词，那正是这个图元要消掉的画面。"
+            "几样并列、每样各自有名字时，这一幕选 `tiles` 预设"
+        ),
     ),
     # 嵌套结构树 —— 「谁在谁里面」的那张图。
     #
@@ -1435,6 +1496,12 @@ T2_GLYPHS: tuple[GlyphDeclaration, ...] = (
         "广播、一对多发送；ROS 的 topic 广播用它",
     ),
     GlyphDeclaration("router", "network", "tabler:router", "路由器、网关"),
+    GlyphDeclaration(
+        "tower",
+        "network",
+        "tabler:building-broadcast-tower",
+        "信号塔、基站；讲运营商、信号的发送方",
+    ),
     GlyphDeclaration("network", "network", "tabler:network", "网络拓扑整体；单个节点用 cpu/server"),
     GlyphDeclaration("cloud", "cloud", "tabler:cloud", "云端服务、远端的算力"),
     GlyphDeclaration("server", "cloud", "tabler:server", "服务端、云端服务"),
@@ -1479,6 +1546,12 @@ T2_GLYPHS: tuple[GlyphDeclaration, ...] = (
     GlyphDeclaration("check", "general", "tabler:check", "表示「对、合法、通过」的对勾"),
     GlyphDeclaration("x", "general", "tabler:x", "表示「错、非法、不通过」的叉号"),
     GlyphDeclaration("lock", "general", "tabler:lock", "锁、加密、权限、被保护"),
+    GlyphDeclaration(
+        "lock-open",
+        "general",
+        "tabler:lock-open",
+        "开着的锁；讲「没加密、谁都能看」时和 `lock` 成对用，两个并排就是一次对比",
+    ),
     GlyphDeclaration("clock", "general", "tabler:clock", "时钟；讲时序、周期、延迟"),
     GlyphDeclaration("shield", "general", "tabler:shield", "防护、安全边界、容错"),
     # -- 工业制造 ----------------------------------------------------------
@@ -1529,6 +1602,13 @@ T2_GLYPHS: tuple[GlyphDeclaration, ...] = (
     ),
     # -- 通用教学 ----------------------------------------------------------
     GlyphDeclaration("hierarchy", "general", "tabler:hierarchy", "层级结构；讲上下级与隶属关系"),
+    GlyphDeclaration(
+        "browser",
+        "general",
+        "tabler:browser",
+        "浏览器窗口；画「打开一个网页」「浏览器做的事」时用它。**不是网页本身**——"
+        "网页是浏览器里装的那个东西，用 `report` 或 `container`",
+    ),
     GlyphDeclaration("list-check", "general", "tabler:list-check", "带勾的清单；讲核对、逐条确认"),
     GlyphDeclaration("report", "general", "tabler:report", "报告、书面记录；讲汇报与结论"),
     GlyphDeclaration("license", "general", "tabler:license", "许可证、资质证书；讲准入与认证"),
@@ -1689,7 +1769,8 @@ PRESETS: tuple[Preset, ...] = (
         "相邻两个节点之间**各写一条 `link`** 把它们连起来（5 个节点要 4 条，"
         "一条都不能少），少了会被校验打回（说 `node_off_the_chain`）。"
         "**几样并列、没有先后的东西不要用 `chain`**：画出来就是一排并排的框加一根箭头，"
-        "观众会去找它们之间的关系，而那里根本没有关系——并列的用 `generic`",
+        "观众会去找它们之间的关系，而那里根本没有关系——"
+        "并列的用 `tiles`（每样都叫得出名字）或 `generic`（每样是一整句话）",
     ),
     # `hub` had a one-line note that said what it *draws* and nothing about when
     # to reach for it, and it lost to `chain` for a scene it was made for. The
@@ -1772,6 +1853,40 @@ PRESETS: tuple[Preset, ...] = (
         "（同一个量的不同角度）的事。中间那条空隙是留给「这两者之间」的关系的："
         "想画它们之间的一条连线或一个双向箭头，挂一个 `link`/`dimension` 上去",
     ),
+    # 并列条目 —— the preset `entry` exists for, and the end of a story that
+    # `hub`'s comment above already tells half of.
+    #
+    # That comment records the first time this scene lost to `chain`: five JSON
+    # uses, drawn as a pipeline. The fix then was a better sentence on `hub`, and
+    # the model stopped picking `hub` and started picking `chain` — twice more,
+    # with `chain`'s note explicitly refusing the case. Re-read from here, the
+    # lesson is not that the sentence was badly written. It is that two presets
+    # and a sentence were being asked to stand in for a picture that did not
+    # exist: `card` was the only "several things in a row" on offer and its
+    # `type` prop is required, so 「API 请求与响应」 could not be one.
+    #
+    # So this preset's job is narrower than "并列" — it is the half of 并列 whose
+    # members **have names**. `generic` keeps the other half: peers that each
+    # need a whole sentence. The two notes have to say the same thing from both
+    # sides or the model is back to choosing between two paragraphs that overlap
+    # (the failure `generic`'s own comment records), which is why the sentence in
+    # each names the other.
+    #
+    # `required_roles=("item",)` for `compare`'s reason: a zero-role preset is
+    # read as "always safe" and competes with `generic` for its scenes, and the
+    # model saying 「这几样各是一个条目」 is the signal that means this picture.
+    Preset(
+        "tiles",
+        ("item",),
+        6,
+        "并列的几样东西，**每一样都叫得出一个名字**：一格一个名字，"
+        "名字前面配一个小图标，一排摆不下就换行成网格。"
+        "讲「常用来做什么」「有哪几类」「包含哪几部分」这类"
+        "**能一件一件数、每件都有名字**的内容时用它——"
+        "`text` 写那个名字，`icon` 写图标名。"
+        "**能连出「先…然后…」的不要用它**，那是 `chain`；"
+        "**每一条是一整句话、要读一遍才知道说的是什么的**，那是 `generic` 的竖排加说明面板",
+    ),
     # `generic` no longer calls itself the last resort, because the last-resort
     # framing *was* its failure mode — see the comment above `compare`. What
     # replaced it is the shape of content it serves, which is also the shape
@@ -1788,7 +1903,10 @@ PRESETS: tuple[Preset, ...] = (
         "讲「有哪几类」「常用来做什么」「包含哪几部分」——"
         "几条彼此平级、连起来说不出「先…然后…」时用它。"
         "**能说出先后的不要用它**，那是 `chain`；"
-        "两样对比用 `compare`，一组值用 `values`。",
+        "两样对比用 `compare`，一组值用 `values`。"
+        "**每一条都能用一个名字叫出来的**（一份清单、一串用途、一组功能），"
+        "改用 `tiles`——它把名字排成一格一格、各配一个图标；"
+        "**一条是一整句话、要读一遍才知道说的是什么的**，才留在这里。",
     ),
 )
 
@@ -1871,6 +1989,14 @@ def _prop_hint(primitive: str, prop: str) -> str:
         return _glossed(TYPE_GLOSSES)
     if prop == "language":
         return _glossed(CODE_LANGUAGES)
+    if prop == "icon":
+        # `TREE_ICONS` is already a `(name, gloss)` table, so it prints as it
+        # stands. The second reader is `tree`, whose note has promised 「行首可以
+        # 写一个 `[图标名]`……可用名字见下」 since it was written while the names
+        # were printed *nowhere* — this line is the 「下」 that sentence was
+        # pointing at, and it is why the marks and `entry.icon` share one set
+        # rather than two.
+        return _glossed(TREE_ICONS)
     if prop == "form":
         return _glossed(TREE_FORMS)
     if prop == "focus":

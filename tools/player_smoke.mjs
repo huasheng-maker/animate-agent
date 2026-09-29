@@ -40,6 +40,7 @@ import { EMPHASIS_NAMES, EMPHASIS_SECONDS, emphasisAt } from "../frontend/player
 import { ENTRANCE_NAMES, entranceAt } from "../frontend/player/entrance.js";
 import { DRAWABLE_KINDS, PRESENCE_PROP, drawElement } from "../frontend/player/registry.js";
 import { fitTransform, readTheme } from "../frontend/player/stage.js";
+import { beatSeconds, clipUrl, voiceIdsIn } from "../frontend/player/voice.js";
 
 /**
  * The context properties `fakeContext` records — and the ones `serializeCalls`
@@ -521,6 +522,56 @@ function linkLengths(scene) {
   return lengths;
 }
 
+/**
+ * A spec's voice track has to answer the four questions the player asks of it.
+ *
+ * None of this needs a browser or an `Audio` element — `voice.js` is arithmetic
+ * on the spec, which is the whole reason it is a module of its own. What cannot
+ * be checked from here is whether any of it *sounds* right; that is a person
+ * listening, and it is the one thing about this feature no test can reach.
+ *
+ * The last case is the one worth having. A voice the spec does not carry must
+ * fall back to `duration` rather than to zero: zero is "no timing was declared",
+ * which the player reads as "sit on this beat for ever", so a wrong answer here
+ * is a film that stops on scene one and looks frozen rather than broken.
+ */
+function checkVoiceTiming(spec) {
+  const steps = spec.scenes.flatMap((scene) => scene.steps);
+  const carried = voiceIdsIn(spec);
+  if (carried.length === 0) {
+    const silent = steps.every((step) => beatSeconds(step, "") === Number(step.duration ?? 0));
+    return silent ? "" : "spec 里没有 speech，但 beatSeconds 给出的不是 duration";
+  }
+
+  const voice = carried[0];
+  const missing = steps
+    .filter((step) => Number(step.speech?.[voice]?.seconds ?? 0) <= 0)
+    .map((step) => step.id);
+  if (missing.length > 0) {
+    return `spec 说自己带 ${voice}，但这些拍没有秒数：${missing.join("、")}`;
+  }
+
+  const drifted = steps
+    .filter((step) => beatSeconds(step, voice) !== step.speech[voice].seconds)
+    .map((step) => step.id);
+  if (drifted.length > 0) {
+    return `beatSeconds 没有用音频的实测长度：${drifted.join("、")}`;
+  }
+
+  const unknown = steps.filter(
+    (step) => beatSeconds(step, "no-such-voice") !== Number(step.duration ?? 0),
+  );
+  if (unknown.length > 0) {
+    return `问一个 spec 没有的音色时没有回落到 duration：${unknown.map((s) => s.id).join("、")}`;
+  }
+
+  const url = clipUrl(steps[0], voice, "/specs/render-x.json");
+  if (!url.startsWith("/specs/audio/")) {
+    return `clip 的地址没接在 spec 所在目录下：${url}`;
+  }
+  return "";
+}
+
 function main() {
   const path = process.argv[2];
   if (!path) {
@@ -583,7 +634,15 @@ function main() {
     let previous = new Map();
     let previousHeading = new Map();
     const ridden = linkLengths(scene);
-    const seconds = scene.steps.reduce((sum, step) => sum + Number(step.duration ?? 0), 0);
+    // `beatSeconds`, not `step.duration`: a spec with a voice track holds the
+    // measured length of the clip in the voice that is playing, and that is what
+    // the player counts against. Reading `duration` here would report the
+    // generated voice's number whichever voice was being listened to — and on a
+    // spec that predates any of this, the same number it always did.
+    const seconds = scene.steps.reduce(
+      (sum, step) => sum + beatSeconds(step, spec.voice ?? ""),
+      0,
+    );
     totalSeconds += seconds;
     for (let stepIndex = 0; stepIndex < scene.steps.length; stepIndex += 1) {
       // Advance far enough for the simulation to have moved things, so a drawer
@@ -916,6 +975,12 @@ function main() {
   const captionFailure = checkCaptionWrapping();
   if (captionFailure) {
     console.error(`\n❌ ${captionFailure}`);
+    return 1;
+  }
+
+  const voiceFailure = checkVoiceTiming(spec);
+  if (voiceFailure) {
+    console.error(`\n❌ ${voiceFailure}`);
     return 1;
   }
 

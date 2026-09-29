@@ -202,8 +202,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* The picker made this row three things wide. Below that the title gives way
-     rather than the buttons — a wrapped header is legible, a squashed one is not. */
+  /* The two pickers made this row three things wide. Below that the title gives
+     way rather than the buttons — a wrapped header is legible, a squashed one
+     is not. */
   flex-wrap: wrap;
   gap: 16px 24px;
   padding: 18px 26px;
@@ -211,55 +212,65 @@ body {
   background: var(--panel-strong);
 }
 
-.title-block {
+/*
+ * The film's name, and the only text in the header now.
+ *
+ * A scene counter, the storyboard's eyebrow and the current scene's teaching
+ * goal used to sit here, and all three changed while the film played — which is
+ * what made the page read as an inspector rather than as a player. The name is
+ * the one thing a video keeps saying, so it is the one thing left, and it says
+ * the *film's* title rather than the current scene's.
+ */
+h1 {
   flex: 1 1 auto;
   min-width: 0;
-}
-
-.eyebrow {
-  margin: 0 0 4px;
-  font-size: 12px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--magenta);
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-}
-
-/* The scene count drops the eyebrow's tracking and its colour: "第 2 / 3 幕" with
-   0.22em between four Chinese characters is four separate signs rather than one
-   label, and this is a position in a sequence, not a heading. */
-#scene-count {
-  letter-spacing: 0;
-  color: var(--muted);
-}
-
-h1 {
   margin: 0;
-  font-size: 21px;
+  font-size: 19px;
   font-weight: 600;
 }
 
-.goal {
-  margin: 6px 0 0;
-  font-size: 13px;
-  color: var(--muted);
-  max-width: 62ch;
+/* ------------------------------------------------------------------- player */
+
+/*
+ * The stage and its controls, stacked. This is the element fullscreen is asked
+ * for, and it is an element of its own rather than the page for that reason: a
+ * player in fullscreen shows the film and its controls, and the palette and
+ * voice pickers up in the header are the one pair of controls a real player has
+ * no equivalent of.
+ */
+.player {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
 }
 
+/*
+ * The transport bar: everything below the picture, in one row.
+ *
+ * The two `input[type="range"]`s are sized by `flex` rather than by a width,
+ * because the seek bar's job is to take whatever space the fixed-size controls
+ * leave — a progress bar with a fixed width is a progress bar that stops lining
+ * up with the film it is measuring as soon as the window changes.
+ */
 .transport {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-strong);
 }
 
 .transport button {
-  min-width: 62px;
-  padding: 9px 14px;
+  padding: 7px 14px;
   border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--text);
+  font-family: inherit;
   font-size: 13px;
   cursor: pointer;
 }
@@ -267,6 +278,58 @@ h1 {
 .transport button:hover {
   border-color: var(--accent);
   box-shadow: var(--shadow);
+}
+
+/*
+ * 下载视频 spends the whole film's length doing its work, and pressing it twice
+ * would open a second recording over the first. Disabled is what says so; the
+ * note under the bar says how long it is going to take.
+ */
+.transport button:disabled {
+  color: var(--muted);
+  border-color: var(--line);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.transport input[type="range"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.seek {
+  flex: 1 1 220px;
+  min-width: 120px;
+}
+
+.gain {
+  flex: 0 0 96px;
+  width: 96px;
+}
+
+/* Tabular figures, so the numbers do not shuffle sideways once a second. */
+.clock {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * What the recording is doing. Not the error plate: ninety seconds of 录制中 is
+ * not a failure, and the one thing that does go wrong — switching tabs freezes
+ * the picture, because frames come from `requestAnimationFrame` — is worth
+ * saying before it happens rather than after.
+ */
+.record-note {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .theme-picker {
@@ -331,6 +394,59 @@ h1 {
   background: linear-gradient(120deg, var(--bg) 0 50%, var(--accent) 50% 100%);
 }
 
+/*
+ * The voice buttons are `.swatch` without a chip — a voice has no colour to show
+ * itself with, only a name. Written as its own rule rather than reusing
+ * `.swatch` with an empty chip: `.swatch`'s padding is asymmetric on purpose
+ * (`4px 9px 4px 4px`) to make room for the chip, and a button without one would
+ * inherit a left inset that looks like a chip failed to render.
+ *
+ * No `[data-theme="…"]` anywhere near this, deliberately. `test_player_theme.py`
+ * finds palettes by that selector, and a rule written that way would be read as
+ * a seventh colour scheme and fail `test_every_palette_is_complete`.
+ */
+.voice {
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 11px;
+  font-family: inherit;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.voice:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.voice.is-active {
+  border-color: var(--accent);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+/*
+ * Sits in the corner the error plate does, and for a related reason: it is a
+ * fact about the page that the page cannot show any other way. Softer, though —
+ * a held-back voice is the normal state of a fresh tab, not something that went
+ * wrong.
+ */
+.voice-hint {
+  position: absolute;
+  inset: auto auto 16px 16px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line-hot);
+  color: var(--text);
+  background: var(--panel-strong);
+  font-size: 13px;
+  cursor: pointer;
+}
+
 .layout {
   flex: 1;
   display: grid;
@@ -342,6 +458,7 @@ h1 {
 
 .stage-wrap {
   position: relative;
+  flex: 1;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--panel);
@@ -352,8 +469,45 @@ h1 {
    * being stretched — which collapses to 0 if anything upstream stops
    * stretching. A 0-height canvas draws nothing and reports no error, so the
    * page would look blank rather than broken. This makes that impossible.
+   *
+   * Kept **under** what the transport bar needs, deliberately: the bar is
+   * inside the same grid row now, and this number plus the bar is what the row
+   * has to hold. It was `min(62vh, 620px)` when the stage was the whole row, and
+   * the host page's iframe is sized around the sum — see the note on `#player`
+   * in `frontend/web/web.css`, which is the other half of this number.
    */
-  min-height: min(62vh, 620px);
+  min-height: min(52vh, 520px);
+}
+
+/*
+ * Fullscreen: the picture takes everything the controls do not.
+ *
+ * `min-height` above is a `vh` number, and in fullscreen a `vh` is the whole
+ * screen — left alone it would be the one thing keeping the stage from filling
+ * the display, so it is lifted here rather than sized for. The borders come off
+ * because there is no longer a page around them for a border to separate the
+ * film from.
+ */
+#player:fullscreen {
+  gap: 0;
+  background: var(--bg);
+}
+
+#player:fullscreen .stage-wrap {
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+#player:fullscreen #stage {
+  border-radius: 0;
+}
+
+#player:fullscreen .transport {
+  border: none;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
 }
 
 /* The canvas is sized by CSS and its backing store by `stage.js`, so the
@@ -441,42 +595,3 @@ h2 {
   border-color: var(--accent);
 }
 
-.steps {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.step {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid transparent;
-  background: var(--panel);
-  cursor: pointer;
-}
-
-.step.is-current {
-  border-color: var(--accent);
-  box-shadow: var(--shadow);
-}
-
-.step-title {
-  display: block;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  color: var(--accent);
-}
-
-.step-body {
-  margin: 6px 0 0;
-  font-size: 12.5px;
-  line-height: 1.6;
-  color: var(--muted);
-}
-
-.step.is-current .step-body {
-  color: var(--text);
-}

@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from animate_agent.documents.models import DocumentIR
 from animate_agent.knowledge.models import LessonIR
 from animate_agent.rendering.layout import (
+    SPEECH_CHARS_PER_SECOND,
     TRANSITION_SECONDS,
     beat_duration,
     block_line_count,
@@ -73,8 +74,23 @@ class StoryboardLimits:
     min_steps: int = 3
     max_steps: int = 5
     #: The finished video, in seconds, and how far off it a storyboard may land.
-    target_seconds: float = 60.0
-    target_band: float = 0.25
+    target_seconds: float = 90.0
+    target_band: float = 0.35
+    #: There is deliberately no floor here to go with those two.
+    #:
+    #: A floor at *this* layer cannot be satisfied. What is measured below is the
+    #: sum of the beats' captions, and those captions are cut from the lesson's
+    #: narration — the real corpus runs 368 characters of narration into 342 of
+    #: captions, and never the other way. A storyboard handed a thin lesson can
+    #: shorten it and cannot lengthen it without inventing facts, which is the one
+    #: thing `knowledge/fidelity.py` exists to forbid. A floor here would refuse
+    #: the film, ask for a retry, refuse it again three times, and throw the run
+    #: away, while the thing that could have fixed it — the writing — was two
+    #: layers upstream and never heard about it.
+    #:
+    #: The floor is at the layer that writes, in `knowledge/agent.py`'s
+    #: `_validate`, measured in the currency that layer actually spends:
+    #: characters.
     require_visual_objects: bool = True
     require_interactive_demo: bool = True
     allowed_renderers: tuple[str, ...] = ()
@@ -597,6 +613,13 @@ WORD_PROPS: tuple[tuple[str, tuple[str, ...], str, str], ...] = (
         "unknown_shape",
         "写错不会报错——播放器认不出就退回角色本来的形状，"
         "而一个「本该是球」的东西画成方框，看着像是这一幕本来就要方框",
+    ),
+    (
+        "icon",
+        TREE_ICON_NAMES,
+        "unknown_icon",
+        "写错不会报错——播放器认不出这个名字就画不出图标，"
+        "而一个没有图标的条目看起来像是本来就没打算配图标",
     ),
 )
 
@@ -1821,6 +1844,10 @@ def _check_total_duration(
     the suite, which is a validator that has stopped being usable on the thing it
     is used on. Brevity is pushed from the other end instead, by the floors that
     already exist — `min_steps`, and the schema's own floor on `description`.
+
+    That other end is now a real check rather than a hope, and it is deliberately
+    **not** here: see `StoryboardLimits`'s note on why a floor at this layer
+    could only ever ask for something the layer cannot do.
     """
     scenes = len(storyboard.scenes)
     beats = sum(
@@ -1835,6 +1862,12 @@ def _check_total_duration(
 
     count = sum(len(scene.steps) for scene in storyboard.scenes)
     characters = sum(len(step.description) for scene in storyboard.scenes for step in scene.steps)
+    # How much one beat may hold, at this beat count, and still land inside the
+    # ceiling. Computed rather than quoted: the message that used to say 「砍到
+    # 10 字上下」 was written when the target was 60 seconds, and a number baked
+    # into the sentence is one target away from being wrong. This message is the
+    # only thing the model is shown when it is asked to try again.
+    per_beat = (ceiling - transitions) * SPEECH_CHARS_PER_SECOND / max(count, 1)
     issues.append(
         ValidationIssue(
             "total_duration_over_target",
@@ -1842,9 +1875,12 @@ def _check_total_duration(
             f"全片 {total:.1f} 秒，超过了 {ceiling:.0f} 秒的上限"
             f"（目标 {limits.target_seconds:.0f} 秒）。构成：{count} 个节拍共 {beats:.1f} 秒"
             f"（{characters} 字），{scenes - 1} 次换幕的淡入淡出共 {transitions:.1f} 秒。"
-            "一句话的时长是按字数推的（每秒 6 个字），所以只有「少说」能压时长："
-            "先把每个节拍砍到 10 字上下，还不够就减节拍数，再不够就减场景数。"
-            "把节拍写短不会让片子显得赶，写长才会",
+            f"一句话的时长是按字数推的（每秒 6 个字），所以只有「少说」能压时长："
+            f"这 {count} 个节拍平均每个不能超过 {per_beat:.0f} 字，现在是 "
+            f"{characters / max(count, 1):.0f} 字。"
+            "先删那些只是在念画面上已经画出来的东西的句子，再压句子本身的长度，"
+            "还不够就减节拍数，再不够就减场景数。"
+            "把一句话写短不会让片子显得赶，写长才会",
         )
     )
 

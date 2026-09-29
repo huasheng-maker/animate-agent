@@ -35,6 +35,13 @@ dev = [
   "ruff>=0.12.0",
   "mypy>=1.16.0",
 ]
+# The voice track, and the only dependency here that talks to a network. Kept out
+# of `dependencies` — and out of `dev`, which would drag it into the import graph
+# of all 993 tests — so that installing the pipeline is still a thing you can do
+# offline. `pip install -e ".[speech]"`.
+speech = [
+  "edge-tts>=7.2",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

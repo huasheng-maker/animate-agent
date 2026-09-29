@@ -6,7 +6,7 @@ import asyncio
 import logging
 import os
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -166,6 +166,7 @@ class LLMClient:
         temperature: float,
         max_tokens: int,
         label: str = "",
+        thinking: str | None = None,
     ) -> str:
         """Send one chat request and return the assistant message content.
 
@@ -173,16 +174,26 @@ class LLMClient:
         It is a parameter rather than something read off the call stack because
         the whole point of the line is that a person can tell which of the two
         calls is costing the minutes, and a logger name cannot say that.
+
+        `thinking` overrides the configured value for **this call only**; `None`
+        means "whatever `LLMConfig` says". It exists because the trade the config
+        describes is not the same trade for every caller: disabled reasoning is
+        what makes a conversational reply usable at all (see the comment on
+        `LLMConfig.thinking` — ~76s to ~5.5s), and it is simultaneously the thing
+        that made a length-constrained task fail three times out of three. A
+        per-call knob lets one be fast and the other be right, instead of
+        picking one answer for the whole process.
         """
+        config = self._config if thinking is None else replace(self._config, thinking=thinking)
         payload: dict[str, Any] = {
-            "model": self._config.model,
+            "model": config.model,
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
-        if self._config.thinking:
-            payload["thinking"] = {"type": self._config.thinking}
-        headers = {"Authorization": f"Bearer {self._config.api_key}"}
+        if config.thinking:
+            payload["thinking"] = {"type": config.thinking}
+        headers = {"Authorization": f"Bearer {config.api_key}"}
         url = self._config.base_url.rstrip("/") + "/chat/completions"
 
         started = time.monotonic()
@@ -194,7 +205,7 @@ class LLMClient:
         # that burned four minutes and *then* failed is exactly the one whose
         # duration somebody needs to know, and it is the one a log placed after
         # the success check would swallow.
-        _log_call(label, self._config.model, response, time.monotonic() - started, max_tokens)
+        _log_call(label, config.model, response, time.monotonic() - started, max_tokens)
         response.raise_for_status()
 
         data = response.json()

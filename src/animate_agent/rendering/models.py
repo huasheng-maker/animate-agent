@@ -561,6 +561,38 @@ class CardElement(_Element):
     height: float = Field(default=0.0, ge=0)
 
 
+class EntryElement(_Element):
+    """One of several peers: a mark and a name, and nothing else.
+
+    The picture for 「它常用于 A、B、C、D、E」 — a list whose members each have a
+    name and no order between them. It is deliberately the smallest thing that
+    can carry a name: no value, no type, no body. That is what keeps it usable
+    for subjects `card` cannot hold, since `CardElement` requires a `type` and
+    most peers have none to name.
+
+    `text` is live, so a beat can rename an entry ("and this one is what we call
+    a schema") — the same teaching move `CardElement.text` exists for. `icon` is
+    **not**: a mark says what this entry *is*, and that does not change from beat
+    to beat. See `Primitive.live_props` in `registry.py` for why a prop is left
+    out rather than declared and ignored.
+
+    `icon` is a **name**, resolved by the player against `RenderSpec.glyphs` the
+    way `body.glyph` and `TreeLine.icon` are — see
+    `_a_named_glyph_must_travel_with_the_spec` below, which is the gate that
+    makes the name mean something on the canvas.
+
+    `width`/`height` are the tile layout cut, not the mark's size: the drawer
+    centres the mark in a fixed slot of the tile so a glyph whose ink is taller
+    than its neighbours cannot shift the name beside it.
+    """
+
+    kind: Literal["entry"] = "entry"
+    text: str = ""
+    icon: str = ""
+    width: float = Field(default=0.0, ge=0)
+    height: float = Field(default=0.0, ge=0)
+
+
 #: What a tree node's value *looks like*, for the one purpose of choosing a
 #: colour. Named rather than inlined so `layout._value_kind` can be annotated
 #: with it — a function that sniffs a type and returns `str` is a function the
@@ -736,10 +768,40 @@ RenderElement = Annotated[
     | BubbleElement
     | OrdinalElement
     | CardElement
+    | EntryElement
     | TreeElement
     | CodeElement,
     Field(discriminator="kind"),
 ]
+
+
+class RenderSpeech(_Model):
+    """One beat's voice track in one voice.
+
+    **`seconds` is measured, not derived.** It comes from the moment the last
+    word of the synthesis ends, plus the pause a beat gets after it speaks —
+    both read off the speech engine's own word-boundary events. The arithmetic
+    `layout.beat_duration` does from the character count is a good enough guess
+    to lay a film out with, and it is the only thing an unvoiced spec has, but
+    it is about a second short per beat: the clip opens with a little silence
+    and ends with a lot more, and a character count cannot see either.
+
+    That gap is why this is per voice rather than one number on the step. Two
+    voices read the same line at different speeds — measured, up to 0.55s apart
+    on a beat — so a step carrying both would have to pick the longer, and pay
+    that difference on every beat. Storing each voice's own length costs nothing
+    and is what `RenderStep.duration` defers to.
+
+    `src` is **relative to the spec** (`audio/<voice>/<hash>.mp3`), not a rooted
+    URL. `data/generated` is served under two different prefixes — `/specs` and
+    `/data` — so a spec that hardcoded one would 404 whenever it was written
+    somewhere else, which is exactly what `--output-dir` does. Same principle as
+    `RenderSpec.theme` carrying a name rather than a colour: what travels is the
+    part the spec owns, and where it is mounted stays the page's business.
+    """
+
+    src: str = ""
+    seconds: float = Field(default=0.0, ge=0)
 
 
 class RenderStep(_Model):
@@ -762,7 +824,20 @@ class RenderStep(_Model):
     #: 颜色. A throw's flight time is derived down here for the same reason, and
     #: a beat's length has the same shape of answer — the narration is what the
     #: beat is *for*, so how long it takes to read is how long it needs.
+    #:
+    #: **With speech attached, this is a copy and `speech` is the source.** The
+    #: speech pass overwrites it with the measured length in the voice the film
+    #: was generated in, so a player that ignores `speech` entirely — an older
+    #: one, or the smoke harness — still walks the film at the right pace. The
+    #: two are the same number by construction, and both are rounded to 2dp so
+    #: that a spec stays byte-identical between runs.
     duration: float = Field(default=0.0, ge=0)
+    #: Voice id -> that voice's track for this beat. Empty on every spec written
+    #: before there was any, which is what keeps those behaving exactly as they
+    #: did. The player prefers `speech[voice].seconds` over `duration` when it
+    #: has it, and falls back to `duration` when it does not — so "is there
+    #: audio" is a question about data, not about a flag.
+    speech: dict[str, RenderSpeech] = Field(default_factory=dict)
     highlights: list[str] = Field(default_factory=list)
     states: dict[str, dict[str, PropValue]] = Field(default_factory=dict)
 
@@ -855,6 +930,23 @@ class RenderSpec(_Model):
     #: travels is a word and what it resolves to stays the page's business. See
     #: `registry.PALETTES`.
     theme: str = ""
+    #: Which voice the film was *generated* in — a voice id, or `""` for a spec
+    #: with no speech at all.
+    #:
+    #: Same shape of answer as `theme` above, and the same `str` rather than a
+    #: `Literal` over `speech.voices.VOICE_IDS`: `rendering` must not know which
+    #: voices exist. The dependency runs `speech` -> `rendering` and not back, so
+    #: the list lives in the layer that spends it, and the step's `speech` dict is
+    #: keyed by a plain string for the same reason.
+    #:
+    #: It is a **default, not a constraint**. The page opens on the URL's
+    #: `?voice=`, then this, then whatever the viewer chose last time — and a
+    #: viewer may switch to any voice the steps actually carry. There is
+    #: deliberately no `voices` list here: the player derives the offered set
+    #: from the steps themselves, and a second copy would be a second thing to
+    #: drift. (`glyphs` travels because the player *cannot* compute it; this it
+    #: can.)
+    voice: str = ""
     stage: RenderStage = Field(default_factory=RenderStage)
     #: The glyph geometry the scenes below refer to, by name.
     #:
@@ -877,6 +969,15 @@ class RenderSpec(_Model):
         than a layout that refused to produce the file. This is the same shape as
         `required_relations`: the failure is knowable here, so it is a failure
         here, rather than something the next layer has to notice.
+
+        Three readers now, and the third is the one that would have gone
+        unnoticed. A missing `body.glyph` still draws a rounded rectangle and a
+        missing tree icon still draws the row, so both are at least *visible* as
+        something. An `entry.icon` with no geometry draws the tile — its panel,
+        its border, its name — with an empty slot where the mark goes, which
+        reads as a list that was never meant to have marks. The picture is
+        complete and wrong, which is the failure mode this project keeps finding
+        at the bottom of these.
         """
         named = {
             element.glyph
@@ -894,6 +995,14 @@ class RenderSpec(_Model):
             if isinstance(element, TreeElement)
             for line in element.lines
             if line.icon
+        )
+        # And an entry's mark, which is required rather than optional — so this
+        # is the only one of the three that a *correct* spec always carries.
+        named.update(
+            element.icon
+            for scene in self.scenes
+            for element in scene.elements
+            if isinstance(element, EntryElement) and element.icon
         )
         missing = sorted(named - set(self.glyphs))
         if missing:

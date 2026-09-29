@@ -6,24 +6,40 @@ URL the page touches is then same-origin, which is why the CORS block below is
 still only about the Next app on :3000 and did not have to grow.
 
     uvicorn animate_agent.api:app
-    # http://127.0.0.1:8000/       upload a document
+    # http://127.0.0.1:8000/       upload a document, or talk one into existence
     # http://127.0.0.1:8000/player the player, ?spec=<url>
     # http://127.0.0.1:8000/specs  where generated specs land
+
+Two ways in, one chain out. `from-file` starts from bytes somebody dragged in;
+`from-chat` starts from a conversation and has the model write the document
+first. Past the `DocumentIR` they are the same function, which is the point of
+`_render_animation` — a second copy of the error table is a second copy to get
+out of step.
 """
 
+import hashlib
 import logging
 import tempfile
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import httpx
-from fastapi import FastAPI, File, HTTPException, Request, Response, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, model_validator
+from starlette.concurrency import run_in_threadpool
 
+from animate_agent.chat import (
+    MAX_MESSAGE_CHARS,
+    MAX_MESSAGES,
+    MAX_TOTAL_CHARS,
+    reply,
+    write_article,
+)
+from animate_agent.config import load_speech_settings
 from animate_agent.documents.file_parser import SUPPORTED_EXTENSIONS
 from animate_agent.documents.models import DocumentIR
 from animate_agent.documents.service import ingest_file, ingest_url
@@ -31,8 +47,12 @@ from animate_agent.knowledge.models import LessonIR
 from animate_agent.knowledge.service import generate_lesson
 from animate_agent.llm import LLMBudgetExhaustedError, load_llm_config
 from animate_agent.rendering.layout import LayoutError
-from animate_agent.rendering.service import render_spec_path, render_storyboard
+from animate_agent.rendering.service import render_spec_path, render_storyboard, write_render_spec
+from animate_agent.speech.engine import EngineUnavailable, SpeechError
+from animate_agent.speech.service import attach_speech
 from animate_agent.storyboard.service import generate_storyboard
+
+_LOG = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = SUPPORTED_EXTENSIONS
 
@@ -110,6 +130,77 @@ class AnimationResponse(BaseModel):
     spec_path: str
     #: What the player is pointed at.
     spec_url: str
+
+
+class ChatMessage(BaseModel):
+    """One turn of a conversation, as a client is allowed to assert it.
+
+    `role` is a `Literal` over the two a client may claim, and `system` is not
+    one of them. The system prompt is the server's — the page is the one thing in
+    this system that must never be able to write it, and an endpoint that accepts
+    a caller-supplied one is an endpoint that lets the caller replace the rules
+    the whole feature rests on.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=MAX_MESSAGE_CHARS)
+
+
+class ChatRequest(BaseModel):
+    """A conversation to answer, bounded at the edge rather than in the handler.
+
+    The bounds are declarative so the 422 is FastAPI's own and says which field
+    was wrong. They are *also* enforced in `chat.history`, because a limit that
+    only exists at the edge stops existing the moment something calls the module
+    directly — which is exactly what a test does.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    messages: list[ChatMessage] = Field(min_length=1, max_length=MAX_MESSAGES)
+
+    @model_validator(mode="after")
+    def _the_whole_conversation_is_bounded(self) -> "ChatRequest":
+        total = sum(len(message.content) for message in self.messages)
+        if total > MAX_TOTAL_CHARS:
+            raise ValueError(f"对话太长：{total} 字，上限 {MAX_TOTAL_CHARS} 字")
+        return self
+
+
+class FromChatRequest(ChatRequest):
+    """A conversation, plus the same three switches `from-file` takes.
+
+    Inherited rather than restated, and for the reason `extra="forbid"` exists:
+    a field that has to be written twice is a field that can be written two
+    different ways. `script`, `speak` and `voice` mean exactly what they mean on
+    the upload route — absent is "whatever the YAML says".
+    """
+
+    script: bool | None = None
+    speak: bool | None = None
+    voice: str | None = None
+
+
+class ChatReply(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reply: str
+
+
+class FromChatResponse(AnimationResponse):
+    """`AnimationResponse`, plus the稿子 that produced the film.
+
+    The article travels back because it is the intermediate thing a person may
+    want to read, correct, or reuse — and because it is on disk under a
+    content-addressed name, so `article_path` is a durable pointer rather than a
+    copy of something that will be gone tomorrow.
+    """
+
+    article: str
+    #: Repository-relative, like `spec_path`, and for the same reason.
+    article_path: str
 
 
 @asynccontextmanager
@@ -212,45 +303,61 @@ async def _ingest_uploaded_file(file: UploadFile) -> DocumentIR:
         tmp_path = Path(tmp.name)
         tmp.write(content)
     try:
-        return ingest_file(tmp_path)
+        # `ingest_file` is synchronous — a read, a parse and a write. It is small
+        # for a text file and not small at all for a hundred-page PDF, and it was
+        # being called straight from an async handler, which blocks the loop for
+        # every other request while it runs. Off the loop rather than rewritten as
+        # async, because the blocking part is somebody else's library.
+        return await run_in_threadpool(ingest_file, tmp_path)
     finally:
         tmp_path.unlink(missing_ok=True)
 
 
-@app.post("/api/lessons/from-file", response_model=LessonIR)
-async def create_lesson_from_file(file: Annotated[UploadFile, File()]) -> LessonIR:
-    try:
-        document = await _ingest_uploaded_file(file)
-        return await generate_lesson(document)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+def _require_key() -> None:
+    """503 unless there is a key to spend, checked before anything is spent.
 
-
-@app.post("/api/animations/from-file", response_model=AnimationResponse)
-async def create_animation_from_file(file: Annotated[UploadFile, File()]) -> AnimationResponse:
-    """A document in, a playable animation out — the whole chain in one request.
-
-    The lesson and the storyboard are written to the *same* directory this app
-    serves, and that directory is absolute. Both matter: relative to the working
-    directory they would land somewhere the `/specs` mount is not looking, and the
-    picture would 404 while every step reported success.
+    A function rather than a line in each handler because both animation routes
+    need it and neither may skip it. Without it the run dies a minute later
+    inside the model client complaining about JSON — the same trap the CLI avoids
+    the same way (`cli.py:137`), and a much worse message.
     """
-    # Checked before the upload is read and before anything is spent. Without a
-    # key the run dies a minute later inside the model client, complaining about
-    # JSON — the same trap the CLI avoids the same way (cli.py:137).
     if not load_llm_config().api_key:
         raise HTTPException(
             status_code=503,
             detail="未配置 DEEPSEEK_KEY，无法调用模型。请在 .env 或环境变量中设置。",
         )
 
+
+async def _render_animation(
+    document: DocumentIR,
+    *,
+    script: bool | None,
+    speak: bool | None,
+    voice: str | None,
+) -> AnimationResponse:
+    """A DocumentIR in, a playable spec out.
+
+    The half of the chain that does not care where the document came from. Both
+    animation routes go through here, which is what keeps the error table below
+    written once — it is the kind of code that gets a branch added to one copy
+    and not the other.
+
+    **`GENERATED_DIR` is read in the body and must stay that way.** Spelling it
+    as `output_dir: Path = GENERATED_DIR` binds at import, so a test that points
+    the output directory at a temp directory would be silently ignored and the
+    suite would write into the real `data/generated` — while still passing. The
+    same goes for every name patched on this module: they are resolved at call
+    time, which is only true as long as they keep being looked up by name.
+    """
+    output_dir = GENERATED_DIR
     storyboard_path: Path | None = None
     try:
-        document = await _ingest_uploaded_file(file)
-        lesson = await generate_lesson(document, output_dir=GENERATED_DIR)
-        storyboard = await generate_storyboard(lesson, document, output_dir=GENERATED_DIR)
-        storyboard_path = GENERATED_DIR / f"{storyboard.storyboard_id}.json"
-        spec = render_storyboard(storyboard, output_dir=GENERATED_DIR)
+        lesson = await generate_lesson(document, output_dir=output_dir, script_mode=script)
+        storyboard = await generate_storyboard(
+            lesson, document, output_dir=output_dir, script_mode=script
+        )
+        storyboard_path = output_dir / f"{storyboard.storyboard_id}.json"
+        spec = render_storyboard(storyboard, output_dir=output_dir)
     except LayoutError as exc:
         # `LayoutError` *is* a `ValueError`, so it has to be caught first. The
         # storyboard is already on disk and is the only thing that says why the
@@ -269,7 +376,36 @@ async def create_animation_from_file(file: Annotated[UploadFile, File()]) -> Ani
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    destination = render_spec_path(storyboard.storyboard_id, output_dir=GENERATED_DIR)
+    destination = render_spec_path(storyboard.storyboard_id, output_dir=output_dir)
+
+    # Absent means "ask the config", and the config ships off. The page therefore
+    # gets an unvoiced film unless it says otherwise, which is the same deal
+    # `script` makes and for the same reason.
+    wants_speech = load_speech_settings().enabled if speak is None else speak
+    if wants_speech:
+        voices = [part.strip() for part in (voice or "").split(",") if part.strip()] or None
+        try:
+            report = await attach_speech(spec, output_dir=output_dir, voices=voices)
+        except EngineUnavailable as exc:
+            # A server that has not installed the extra, rather than a bad
+            # request. 503 with the install line, because the fix is on this side.
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except SpeechError as exc:
+            raise HTTPException(status_code=502, detail=f"配音失败: {exc}") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        write_render_spec(spec, destination)
+        _LOG.info(
+            "配音: %d 拍 / %s / 新合成 %d 复用 %d / 成片 %.1f 秒",
+            report.beats,
+            "、".join(report.voices),
+            report.synthesised,
+            report.reused,
+            report.seconds,
+        )
+        if report.warning is not None:
+            _LOG.warning("%s", report.warning)
+
     return AnimationResponse(
         storyboard_id=storyboard.storyboard_id,
         lesson_id=lesson.lesson_id,
@@ -278,6 +414,146 @@ async def create_animation_from_file(file: Annotated[UploadFile, File()]) -> Ani
         scene_count=len(spec.scenes),
         spec_path=_repo_relative(destination),
         spec_url=f"{SPECS_URL}/{destination.name}",
+    )
+
+
+@app.post("/api/lessons/from-file", response_model=LessonIR)
+async def create_lesson_from_file(file: Annotated[UploadFile, File()]) -> LessonIR:
+    try:
+        document = await _ingest_uploaded_file(file)
+        return await generate_lesson(document)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/animations/from-file", response_model=AnimationResponse)
+async def create_animation_from_file(
+    file: Annotated[UploadFile, File()],
+    script: Annotated[bool | None, Form()] = None,
+    speak: Annotated[bool | None, Form()] = None,
+    voice: Annotated[str | None, Form()] = None,
+) -> AnimationResponse:
+    """A document in, a playable animation out — the whole chain in one request.
+
+    The lesson and the storyboard are written to the *same* directory this app
+    serves, and that directory is absolute. Both matter: relative to the working
+    directory they would land somewhere the `/specs` mount is not looking, and the
+    picture would 404 while every step reported success.
+
+    `script` is the one thing a caller may need to say about the *nature* of what
+    it is uploading rather than about what to do with it: this text was written to
+    be read aloud, so keep the author's words and let the film follow their
+    length. Left out (which is what the upload page does), it falls back to the
+    YAML, which is off — a page where somebody drags in a slide deck must not
+    acquire script behaviour by default.
+
+    `speak` and `voice` follow the same rule and for the same reason: absent means
+    "whatever the YAML says", and the YAML says no. `voice` is one id, or two
+    separated by a comma for a film that carries both — the same string a
+    `<select>` gives, rather than a repeated form field, so that the page can post
+    one value and not have to know how multipart repeats work.
+
+    The spec is rewritten **in place** once it has a voice track, so `spec_url`
+    keeps pointing at one file: the player fetches it once and finds out from the
+    spec itself whether there is anything to play.
+    """
+    _require_key()
+    document = await _ingest_uploaded_file(file)
+    return await _render_animation(document, script=script, speak=speak, voice=voice)
+
+
+#: What a generated article's filename starts with. Named so a person looking at
+#: `data/generated/` can tell one from a spec without opening it.
+ARTICLE_PREFIX = "article-"
+
+
+def _write_article(text: str) -> Path:
+    """Write `text` where the pipeline can read it back, and return the path.
+
+    Content-addressed, so the same conversation asked for twice lands on the same
+    file rather than accumulating a new one per click. It is a real file in a real
+    directory and not a `NamedTemporaryFile`, for three reasons that all come down
+    to the same one — this is an artifact, not scratch space: nothing leaks into
+    `%TEMP%`, the `document_id` downstream is stable for the same conversation
+    instead of new every time, and there is something left afterwards for a person
+    to read.
+
+    `.md` is load-bearing: `file_parser.parse_file` dispatches on the suffix, and
+    an article named `.txt` would take the other parser.
+    """
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+    path = GENERATED_DIR / f"{ARTICLE_PREFIX}{digest}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+@app.post("/api/chat", response_model=ChatReply)
+async def chat_turn(request: ChatRequest) -> ChatReply:
+    """One conversational turn. No pipeline, no artifacts — just an answer.
+
+    Kept separate from the animation route on purpose: this one is expected to
+    come back in seconds and may be called many times before anything is
+    generated. Folding it in would make every question cost a film.
+    """
+    _require_key()
+    try:
+        text = await reply([message.model_dump() for message in request.messages])
+    except LLMBudgetExhaustedError as exc:
+        raise HTTPException(status_code=502, detail=f"调用模型失败: {exc}") from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"调用模型失败: {exc}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return ChatReply(reply=text)
+
+
+@app.post("/api/animations/from-chat", response_model=FromChatResponse)
+async def create_animation_from_chat(request: FromChatRequest) -> FromChatResponse:
+    """A conversation in, a playable animation out.
+
+    Two extra steps in front of the upload route's chain: the model writes the
+    document, and the document is read back off disk. Everything after that is
+    `_render_animation`, which is the same function `from-file` calls.
+
+    The article is generated here rather than in the browser, which is what keeps
+    the page a dumb poster: it sends a conversation and renders text, and it never
+    has to know the file-extension rules or synthesize a `File` out of a string to
+    post back. It also means the intermediate document is a thing on disk that can
+    be read afterwards rather than a string that existed for one round trip.
+    """
+    _require_key()
+    messages = [message.model_dump() for message in request.messages]
+
+    try:
+        article = await write_article(messages)
+    except LLMBudgetExhaustedError as exc:
+        raise HTTPException(status_code=502, detail=f"写稿失败: {exc}") from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"写稿失败: {exc}") from exc
+    except ValueError as exc:
+        # The model answered, but not with anything the pipeline can use. The
+        # caller's mistake only in the sense that the caller asked; there is
+        # nothing for them to fix, so the message has to say what came back.
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    path = _write_article(article)
+    try:
+        document = await run_in_threadpool(ingest_file, path)
+    except ValueError as exc:
+        # Parsing our *own* article failed, which means the model produced
+        # something `parse_markdown` found no text in. Named as ours, because
+        # "文件中没有可解析的文本内容" reads like the user's fault otherwise.
+        raise HTTPException(
+            status_code=422,
+            detail=f"生成的稿子没法当成文档读：{exc}（稿子在 {_repo_relative(path)}）",
+        ) from exc
+
+    result = await _render_animation(
+        document, script=request.script, speak=request.speak, voice=request.voice
+    )
+    return FromChatResponse(
+        **result.model_dump(), article=article, article_path=_repo_relative(path)
     )
 
 

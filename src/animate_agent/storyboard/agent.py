@@ -74,6 +74,7 @@ class StoryboardAgent:
         temperature: float = DEFAULT_TEMPERATURE,
         max_tokens: int = DEFAULT_MAX_TOKENS,
         debug_dir: Path | None = None,
+        script_mode: bool = False,
     ) -> None:
         self._llm = llm
         self._limits = limits
@@ -82,6 +83,12 @@ class StoryboardAgent:
         self._temperature = temperature
         self._max_tokens = max_tokens
         self._debug_dir = debug_dir
+        # Only the user prompt differs by mode — the caption may be reworded out
+        # of a document and may not be reworded out of a script. The length
+        # arithmetic is the same either way, which is why this does not reach
+        # `limits`: the film is held to one to two minutes whichever road it came
+        # down.
+        self._script_mode = script_mode
 
     def _dump_rejection(self, lesson: LessonIR, attempt: int, raw: str, reason: str) -> None:
         """Persist a rejected response *and the complaint that rejected it*.
@@ -105,7 +112,9 @@ class StoryboardAgent:
         (self._debug_dir / f"{stem}-error.txt").write_text(reason, encoding="utf-8")
 
     async def generate(self, lesson: LessonIR, document: DocumentIR) -> StoryboardIR:
-        user_prompt = build_storyboard_prompt(lesson, allowed_renderers=self._allowed_renderers)
+        user_prompt = build_storyboard_prompt(
+            lesson, allowed_renderers=self._allowed_renderers, script_mode=self._script_mode
+        )
         messages: list[dict[str, str]] = [
             {"role": "system", "content": STORYBOARD_SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},

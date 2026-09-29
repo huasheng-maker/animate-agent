@@ -189,6 +189,11 @@ GLYPH_SOURCES: dict[str, GlyphSource] = {
     "wifi": GlyphSource("wifi", 4, _outline(4)),
     "broadcast": GlyphSource("broadcast", 3, _outline(3)),
     "router": GlyphSource("router", 6, _outline(6)),
+    # Not `antenna`, which is a mast with waves and reads as a radio set. The lesson
+    # that needed this one said 运营商, and the picture a reader already has for a
+    # carrier is a tower. Upstream's five ink paths: a dot, two arcs above it, and
+    # the two legs of the mast.
+    "tower": GlyphSource("building-broadcast-tower", 5, _outline(5)),
     "network": GlyphSource("network", 8, _outline(8)),
     "cloud": GlyphSource("cloud", 1, _outline(1)),
     "server": GlyphSource("server", 4, _outline(4)),
@@ -226,6 +231,10 @@ GLYPH_SOURCES: dict[str, GlyphSource] = {
     "check": GlyphSource("check", 1, _outline(1)),
     "x": GlyphSource("x", 2, _outline(2)),
     "lock": GlyphSource("lock", 3, _outline(3)),
+    # The other half of `lock`, and the pair a 加密/不加密 comparison draws: same body
+    # and keyhole, shackle left open at the top. The two differ in exactly the thing
+    # such a lesson is teaching, which is why this is a new glyph and not a rotation.
+    "lock-open": GlyphSource("lock-open", 3, _outline(3)),
     "clock": GlyphSource("clock", 2, _outline(2)),
     "shield": GlyphSource("shield", 1, _outline(1)),
     # -- 工业制造 ----------------------------------------------------------
@@ -253,6 +262,10 @@ GLYPH_SOURCES: dict[str, GlyphSource] = {
     "cylinder": GlyphSource("cylinder", 2, _outline(2), set="lucide"),
     # -- 通用教学 ----------------------------------------------------------
     "hierarchy": GlyphSource("hierarchy", 5, _outline(5)),
+    # The one icon a 网页请求 lesson reached for and could not find. Everything in the
+    # set was a *device* — cpu, server, router — and a browser is a window: what the
+    # reader is looking at, rather than something on the wire.
+    "browser": GlyphSource("browser", 3, _outline(3)),
     "list-check": GlyphSource("list-check", 6, _outline(6)),
     "report": GlyphSource("report", 7, _outline(7)),
     "license": GlyphSource("license", 3, _outline(3)),

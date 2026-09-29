@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
 from animate_agent.knowledge.models import LessonIR
+from animate_agent.rendering.layout import SPEECH_CHARS_PER_SECOND, TRANSITION_SECONDS
 from animate_agent.rendering.registry import render_vocabulary
 from animate_agent.storyboard.models import (
     StoryboardControl,
@@ -21,6 +22,16 @@ from animate_agent.storyboard.models import (
     StoryboardScene,
     StoryboardStep,
 )
+
+#: How many beats a scene usually gets, and therefore the number the per-caption
+#: character count is divided by.
+#:
+#: A target rather than a bound — `StoryboardLimits` allows three to five — but
+#: it is the number the arithmetic needs, because the caption length on screen is
+#: `narration ÷ (scenes × beats)`. Left to the model it averaged 3.67, which is
+#: the difference between a 17-character caption and a 15-character one; small,
+#: but it is the one lever that moves captions at all, so it is stated.
+TARGET_STEPS_PER_SCENE = 4
 
 #: Fields the model authors, paired with the model that declares them. Only this
 #: list lives here; the bounds are read off the declarations at call time, so a
@@ -159,17 +170,27 @@ JSON 结构如下（不要输出 JSON 以外的任何文字）：
 - **场景覆盖**：`lesson_scene_ids` 必须覆盖 LessonIR 里的**每一个**场景 id，
   不多不少。一个 storyboard 场景可以覆盖 1~2 个课程场景（内容单薄的相邻场景合并成一幕），
   但**不允许新增**课程里没有的场景。
-- **节拍数量**：每个场景写 3~5 个 `steps`。
-- **成片时长 60 秒**，超过 75 秒会被打回重写。
-  时长是按字数推的：**每秒 6 个字**。所以整条片子的字幕加起来只有约 350 字，
-  每个 `description` 写 9~14 字。换算给你一个直觉：
-  10 幕 × 4 拍 × 9 字 = 360 字 = 60 秒；把每个 `description` 写成 30 字，
-  同样结构就是 200 秒，直接不合格。
-- **`description` 是屏幕上的字幕，不是讲解稿。** 它是 LessonIR 那条 narration 的
-  **浓缩**，不是照抄——一条 narration 大约要切成 3~5 行字幕，每行只讲一件事。
-  字数不够时宁可多说几拍，也不要在一拍里塞两件事。
+- **节拍数量：每个场景以 4 个 `steps` 为主**（3~5 都行，四拍是常态）。
+  四拍不是随手定的：一屏字幕 17 字上下，一幕四拍刚好是一段讲得完的话。
+- **成片时长**由所有 `description` 加起来决定——**每秒 6 个字**，再加换幕的几秒。
+  目标是一到两分钟，超了会被打回重写。
+  **每个 `description` 该写多少字，下面的用户消息按这份课程的实际字数算给你了。**
+  照那个数来：它比一个固定数字管用，因为课程一变它跟着变。
+- **`description` 是屏幕上的字幕，一屏就是一个完整的意思。** 它是上面那条 narration
+  切出来的：不是照抄，也不是压缩成一个标签——一条 narration 切成 3~5 屏，每屏把一件事
+  讲完。**不要把一句话劈成两半**，半句占一屏，观众得等下一屏才知道你要说什么。
+  多写「为什么」、少报「是什么」：这句话如果是画面上已经画着的东西，它不值得占一屏。
 - **每个节拍必须有视觉变化**：至少写一个 `highlights`，或至少改一个 `object_states`。
   只讲文字、画面上什么都没动的节拍不是节拍。
+- **`highlights` 和 `emphasis` 不是一回事。** `highlights` 是「看这里」——把这一拍
+  要讲的对象圈出来；`emphasis` 是「它动了一下」——在 `object_states` 里给这个对象
+  写一个动作名（可选值见下方词表）。两者可以落在同一拍上，那是最重的一下。
+  **「动一下」要省着用**：同一个对象连着几拍都强调，观众就分不清哪一拍才是重点。
+  按要表达的意思挑，不要一律用同一个：提醒注意用 `pulse`，表示「不对劲」用 `shake`，
+  表示「它不稳」用 `wobble`，表示「它撑不住」用 `spring`，表示「就是它」用 `pop`，
+  绕支点荡开用 `swing`（**只有 `arm` 角色有支点**，别放在别的东西上，那样它只会原地乱转）。
+  **强调不会留到下一拍**——它是一次手势，不是状态；哪一拍要它就写在哪一拍，
+  上一拍写过这一拍不写，它自己就停了。
 - **关键词覆盖**：每个场景各节拍的 `key_points` 合起来，必须**逐字**包含它所覆盖的
   那些课程场景的**全部** `key_points`。请直接照抄，不要改写、不要合并近义词。
 - **出处覆盖**：每个场景各对象的 `source_refs` 合起来，必须覆盖它所覆盖的课程场景的
@@ -185,10 +206,38 @@ JSON 结构如下（不要输出 JSON 以外的任何文字）：
 - **讲到了才出现。** 一幕里的对象默认从第一拍起就都在画面上。想让某样东西
   **在讲它的那一拍才出现**，就在这个对象的 `props` 里写 `"visible": false`
   （`emitter`/`zone` 写 `"enabled": false`，同一个意思），
-  再在讲它的那一拍用 `object_states` 把它改成 `true`——它会淡着浮上来。
+  再在讲它的那一拍用 `object_states` 把它改成 `true`——它会按自己的出场方式冒出来
+  （出场方式见下一条，不写就是淡着浮上来）。
   同一拍里 `highlights` 到它是正常的，那正是它登场的那一下。
   **写了 false 就必须有某一拍把它打开**，整幕都不打开的会被校验打回
   （说 `object_never_visible`）。
+- **东西怎么出场，也是你定的。** 上一条管的是「什么时候出现」，这一条管的是
+  「冒出来的那一下长什么样」：在这个对象的 `props` 里写 `"enter"`，可选值见下方词表。
+  **一幕里不要都用同一种**——相邻的两三样换着来，观众才看得出它们是分别登场的，
+  而不是整屏一起亮起来。按东西的来头挑：从下往上冒用 `rise`（默认）、
+  从上面落下来用 `drop`（重物、压下来的结论）、由小涨到原大用 `zoom`（放大、聚焦、走近看）、
+  一路只是淡入用 `fade`（底色、背景、本来就该安静的东西）、
+  从左往右擦出来用 `wipe`（一段话、一张表被「读」出来）。
+  **只有方框类的东西擦得出来**：线、箭头、坐标轴、令牌这类没有框的，
+  写 `wipe` 会退回 `rise`，写了也不算错，只是看不出差别。
+  还有一条要记住：**从头到尾 `visible` 都是 true 的对象，根本不会有出场那一下**——
+  出场是「冒出来」的一部分，不冒出来就没有那一下。
+- **先看这段内容是什么形状，再挑画法。** 有几类内容各有各的画法，
+  **一律画成一排方框加箭头是错的**：
+  - **「一层套一层」「谁在谁里面」「分了几层、分了几类」** → 写一个 `tree`，
+    把层次**用两个空格的缩进写进它的 `text`**（源文里给了缩进的样子就照着抄）。
+    缩进本身就是内容：外层顶格、里面那层缩进两格、再里面再缩两格，
+    观众一眼看出谁装在谁里面。**不要**把这几层各写一个 `node` 串成 `chain`——
+    那画出来是一排先后相承的方框，可它们之间**没有先后**。
+  - **「一条一条列出来」「一份配置、一段代码、一串参数」** → 写一个 `code`，
+    `text` 就是那几行本身，一行一行原样写。**不要**把这几行塞进某个对象的
+    `label` 或令牌的 `state` 里——那是把一整块内容降级成一个名字。
+  - **「这两种哪个对」「差在哪」「一边…另一边…」** → 两样东西都写 `option` 角色，
+    这一幕就能选 `compare` 预设，它们会左右摆开。
+  - **「一路经过某几站」** → 才是 `chain`。而且**这一幕里不要写 `traveler`**：
+    一个令牌只跑得了一条线，它会停在半路，而字幕说它已经到了终点——
+    要让路走完，就用 `link` 的 `active` 逐拍点亮下一段。
+  - 一段话里既有结构又有过程时，按**先讲到的那一样**挑；两样都要讲，拆成两幕。
 - **画面顺序跟着讲解顺序走。** 谁在上、谁在左，是按你旁白里**先讲谁**定的：
   一幕里同时有代码块和值卡片时，**第一拍先讲到的那一样占上半**，
   另一件排在下面；对象横排时也是先声明的在左边。
@@ -214,8 +263,41 @@ JSON 结构如下（不要输出 JSON 以外的任何文字）：
 STORYBOARD_SYSTEM_PROMPT = STORYBOARD_SYSTEM_PROMPT + "\n" + render_field_constraints() + "\n"
 
 
-def build_storyboard_prompt(lesson: LessonIR, *, allowed_renderers: tuple[str, ...] = ()) -> str:
-    """Serialize a LessonIR plus the generated vocabulary into the user message."""
+def caption_budget(lesson: LessonIR) -> tuple[int, int, float]:
+    """How much one `description` should hold, for *this* lesson.
+
+    Returns `(low, high, average)`, in characters. The band is a spread around the
+    average rather than a rule: some beats carry a clause and some carry a whole
+    sentence, and a model told to hit one number exactly writes uniformly, which
+    is the monotony the rhythm instruction is there to avoid.
+
+    The arithmetic is the whole of this round's fix, and it is one division:
+    `narration ÷ (scenes × beats)`. What it replaces is a constant — 「每个
+    description 写 9~14 字」 — which was correct for exactly one lesson: a
+    350-character script cut into nine scenes of four beats. The lesson on disk
+    has more characters than that, so the constant was already asking for captions
+    shorter than the film could afford, and no test could see it because a
+    character count in a prompt is not a thing anything reads back.
+    """
+    characters = sum(len(scene.narration) for scene in lesson.scenes)
+    beats = max(len(lesson.scenes) * TARGET_STEPS_PER_SCENE, 1)
+    average = characters / beats
+    return max(round(average * 0.75), 1), max(round(average * 1.35), 2), average
+
+
+def build_storyboard_prompt(
+    lesson: LessonIR,
+    *,
+    allowed_renderers: tuple[str, ...] = (),
+    script_mode: bool = False,
+) -> str:
+    """Serialize a LessonIR plus the generated vocabulary into the user message.
+
+    The length arithmetic lives here rather than in the system prompt because it
+    is a fact about *this* lesson: it is the lesson's own character count divided
+    by the beats it will become. A number in the system prompt would be a constant
+    again, and the constant is what this round is removing.
+    """
     lines: list[str] = [
         f"课程标题：{lesson.title}",
         f"学科：{lesson.subject}",
@@ -224,6 +306,28 @@ def build_storyboard_prompt(lesson: LessonIR, *, allowed_renderers: tuple[str, .
         "整体学习目标：",
     ]
     lines.extend(f"- {objective}" for objective in lesson.learning_objectives)
+    lines.append("")
+
+    low, high, average = caption_budget(lesson)
+    total = sum(len(scene.narration) for scene in lesson.scenes)
+    scenes = len(lesson.scenes)
+    seconds = total / SPEECH_CHARS_PER_SECOND + max(scenes - 1, 0) * 2 * TRANSITION_SECONDS
+    lines.append("## 这份稿子的字数账（照着算，不要自己估）")
+    lines.append(f"- 全片讲解文案共 **{total} 字**，{scenes} 幕。")
+    lines.append(
+        f"- 每幕 {TARGET_STEPS_PER_SCENE} 拍就是 {scenes * TARGET_STEPS_PER_SCENE} 拍，"
+        f"所以**每个 `description` 写 {low}~{high} 字**（平均 {average:.0f} 字）。"
+    )
+    lines.append(
+        f"- 按每秒 6 个字、加上换幕，成片约 **{seconds:.0f} 秒**——这就是你要的时长，"
+        "每一屏多几个字少几个字，最后都会加到这里。"
+    )
+    if script_mode:
+        lines.append(
+            "- **这份稿子是照着这条片子写的，字幕直接切它自己的句子。** "
+            "不要改写措辞、不要换说法、不要为了长短把一句完整的话拆开或合并——"
+            "观众要听到的是写稿人写下的那句话，你只决定它在第几屏出现。"
+        )
     lines.append("")
 
     lines.append("## 课程场景（必须全部覆盖）")

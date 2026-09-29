@@ -1,11 +1,13 @@
 /**
  * The line under the picture: what this beat is saying, in words.
  *
- * A beat has carried its narration since `RenderStep` existed, and until now
- * the only place it appeared was the 教学节拍 list in the side panel — which is
- * chrome, outside the canvas, and therefore not in the picture at all. The
- * reference film this project is aiming at has the words on screen; that is
- * most of what makes it a video rather than a diagram with a legend beside it.
+ * A beat has carried its narration since `RenderStep` existed, and for a while
+ * the only place it appeared was the 教学节拍 list in the side panel — which was
+ * chrome, outside the canvas, and therefore not in the picture at all, and which
+ * a downloaded file would not have contained either. The reference film this
+ * project is aiming at has the words on screen; that is most of what makes it a
+ * video rather than a diagram with a legend beside it. That panel is gone now
+ * and this band is the only place the narration is written down.
  *
  * Arithmetic, not drawing
  * -----------------------

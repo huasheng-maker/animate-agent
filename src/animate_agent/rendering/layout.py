@@ -71,6 +71,7 @@ from animate_agent.rendering.models import (
     DimensionElement,
     EmitterElement,
     EnterStyle,
+    EntryElement,
     LinkElement,
     NoteElement,
     OrdinalElement,
@@ -696,6 +697,51 @@ CARD_MAX_WIDTH = 260.0
 #: layout says so rather than shrinking them further.
 CARD_ROWS_MAX = 3
 
+#: 并列表格里的条目, in stage units — `entry`'s metrics, and deliberately not
+#: `card`'s.
+#:
+#: A tile is a card minus its second storey: a card spends `CARD_VALUE_LINE_HEIGHT`
+#: on the value and `CARD_TAG_HEIGHT` on the pill under it, and an entry has only
+#: the name. That is most of why the two are separate constants rather than one
+#: set with a flag — 56 against 104 is the difference between five tiles on one
+#: row and five on two, and a reader comparing the two blocks should see the
+#: halving rather than infer it.
+ENTRY_FONT_SIZE = 20.0
+#: One line, and the same 20/28 the notes use — the register is the same: a
+#: short phrase in a box, not a value set large.
+ENTRY_LINE_HEIGHT = 28.0
+ENTRY_PADDING = 14.0
+#: The mark's slot, and the mark inside it. Two numbers because they answer two
+#: questions: the slot is what the *layout* reserves and the name is placed
+#: after, and the size is what the *drawer* fills it with. Collapsing them would
+#: let a glyph whose ink box is tall and thin — a flask, a clock — pull the name
+#: beside it sideways, since `drawGlyph` fits the ink and not the slot.
+ENTRY_ICON_SLOT = 28.0
+ENTRY_ICON_SIZE = 22.0
+ENTRY_ICON_GAP = 10.0
+ENTRY_GAP = 16.0
+#: The floor is higher than a card's because a tile always carries a mark: a
+#: name two characters long plus its slot is already most of this.
+ENTRY_MIN_WIDTH = 160.0
+ENTRY_MAX_WIDTH = 300.0
+#: One more than the cards', and it costs nothing to allow: a tile is half a
+#: card tall, so a fourth row of tiles is still shorter than three rows of cards.
+ENTRY_ROWS_MAX = 4
+
+#: The second arrangement of the same tiles — 竖排, one entry per row.
+#:
+#: Its own width band rather than `ENTRY_MIN_WIDTH`/`ENTRY_MAX_WIDTH`, because a
+#: list row is not a grid cell: the floor has to be wide enough that a row reads
+#: as *a row* and not as a tile that fell out of its grid. The two floors are the
+#: whole of the difference between the layouts that a reader can name — the
+#: picture goes from several tiles abreast to one bar per line.
+#:
+#: The ceiling stays well inside the frame so a list never has to shrink its
+#: type; it exists for the same reason the grid's does, which is that a name
+#: written as a whole sentence would otherwise become a banner.
+ENTRY_LIST_MIN_WIDTH = 340.0
+ENTRY_LIST_MAX_WIDTH = 460.0
+
 #: 结构树 and 代码块, in stage units.
 #:
 #: One set of metrics for both, because they are one piece of typography: the
@@ -930,7 +976,9 @@ _PRESETS_WITH_A_LEAD: frozenset[str] = frozenset({"lane", "hub", "compare"})
 #: `_BODY_SIZES` instead, which is the difference between `compare` and a
 #: `generic` with the boxes moved. The set is here so that a new preset has to
 #: answer the question rather than inherit an answer by omission.
-_PRESETS_WITHOUT_A_LEAD: frozenset[str] = frozenset({"chain", "field", "values", "generic"})
+_PRESETS_WITHOUT_A_LEAD: frozenset[str] = frozenset(
+    {"chain", "field", "values", "tiles", "generic"}
+)
 
 #: Glyph data lives in `assets/glyphs/` as build-time products of
 #: `tools/build_glyphs.py`. Layout reads the directory rather than the
@@ -1380,12 +1428,14 @@ def _wrap_text(text: str, font_size: float, max_width: float) -> list[str]:
 def _written_texts(obj: StoryboardObject, scene: StoryboardScene, prop: str) -> list[str]:
     """Every string this object is given for `prop`: the declared one, and each beat's.
 
-    Shared by `text` and by `type`, because both are live props on the two
-    primitives that carry written content — `readout` and `card`. Whatever
-    reserves room for a string has to reserve it for every value the beat can
-    write into it, not only the one the object started with; the panel comment
-    below is the measurement that established this, and it is the same defect
-    one size down.
+    Shared by `text` and by `type`, because both are live props on the three
+    primitives that carry written content — `readout`, `card` and `entry`.
+    Whatever reserves room for a string has to reserve it for every value the
+    beat can write into it, not only the one the object started with; the panel
+    comment below is the measurement that established this, and it is the same
+    defect one size down. `_entry_boxes` is the third reader, and it is the one
+    where getting this wrong is quietest: a tile narrower than a name a later
+    beat writes draws the words over the border, and nothing at all objects.
     """
     candidates: list[PropValue | None] = [obj.props.get(prop)]
     for step in scene.steps:
@@ -1575,6 +1625,194 @@ def _card_boxes(
             height=height,
         )
     return boxes
+
+
+def _entry_boxes(
+    scene: StoryboardScene,
+    stage: RenderStage,
+    frame: _Frame,
+    placed: dict[str, _Box],
+    repeat_index: int = 0,
+) -> dict[str, _Box]:
+    """The 条目 grid, shared by every preset — `_card_boxes`' twin, and shared
+    for its reason rather than by imitation.
+
+    `_card_boxes`' docstring argues that "a row of values being compared is a
+    *list*, and a list is not a picture of a space", so it is placed under every
+    `scene_type` instead of being one preset's metaphor. An entry is further
+    from a space than a card is — it has no value and no type, only a name — so
+    the argument holds with room to spare. The practical half is the one that
+    settles it: the model that writes `item` and picks `generic` anyway is the
+    *expected* mistake, and layout runs after the last model call, so a grid
+    that only existed under `tiles` would make that mistake terminal — the whole
+    storyboard, thrown away, with nothing fed back and nothing retried.
+
+    Mirrored from `_card_boxes` rather than factored with it, and the reason is
+    the one thing this adds that the card version does not have. A card grid is
+    checked for width by the loop below and for everything else by `_check_fit`,
+    which is fine while a card is the only thing that can be in that spot. A tile
+    grid is placed *below* whatever the cards already put down, so its `top` can
+    be pushed low by content it did not choose — and when that happens the honest
+    error is 「条目太多，这一幕放不下」, not `_check_fit`'s 「画进了字幕条：它下边缘
+    在 X」, which names the symptom and not the cause. Factoring the two would
+    mean threading that difference through as a flag, which is how a shared
+    function stops being one.
+
+    `repeat_index` is how many scenes **immediately before this one drew the same
+    preset** — 0 for the first of a run, 1 for the second. Odd indices come out as
+    竖排 instead of a grid, which is the whole of the rule that stops three
+    consecutive `tiles` scenes from being one picture printed three times.
+
+    It is decided here, in the layout, and not in the prompt, because *which way
+    round several equal things are set down* is presentation — the model said
+    「这几样是并列的名字」 and that is the semantic half. Asking the model to vary
+    its own choices would be asking it to vary for variety's sake, which this
+    project has already paid for once (see `tools/check_storyboard.py`'s
+    `_picture_report` on `generic` being described as the safe default). Only the
+    arrangement moves; nothing about the model's answer does.
+    """
+    entries = _with_primitive(scene, "entry")
+    if not entries:
+        return {}
+
+    lead = ENTRY_ICON_SLOT + ENTRY_ICON_GAP + ENTRY_PADDING * 2
+    widest = max(
+        (
+            _text_width(text, ENTRY_FONT_SIZE)
+            for obj in entries
+            for text in _written_texts(obj, scene, "text")
+        ),
+        default=0.0,
+    )
+    width = min(max(widest + lead, ENTRY_MIN_WIDTH), ENTRY_MAX_WIDTH)
+    height = ENTRY_PADDING * 2 + max(ENTRY_LINE_HEIGHT, ENTRY_ICON_SIZE)
+
+    top = frame.top
+    if placed:
+        top = max(box.y + box.height / 2 for box in placed.values()) + ENTRY_GAP
+    # Checked before the search rather than inside it, because the two ways this
+    # fails want two different sentences and the loop cannot tell them apart. The
+    # grid is centred between `top` and the frame's floor, so it fits vertically
+    # exactly when one row does — and when it does not, the cause is whatever the
+    # preset put above, not the number of entries. Saying 「排到 4 行也放不下」
+    # there would send the reader to the wrong lever.
+    if top + height > frame.bottom + FIT_TOLERANCE:
+        raise LayoutError(
+            f"场景 `{scene.id}`：上面已经摆到 y {top:.0f}，而画框到 {frame.bottom:.0f} 为止——"
+            f"连一行条目（{height:.0f}px 高）都放不下。"
+            "少写几个，或者把它们拆到另一幕"
+        )
+
+    # 竖排 first, and `None` back rather than a raise: a list is *taller* than a
+    # grid — one row per entry against `ENTRY_ROWS_MAX` rows at most — so there
+    # are scenes it cannot hold and the grid can. Falling through to the grid
+    # below is what keeps this feature from being able to turn a scene that drew
+    # yesterday into a scene that fails today; the worst it can do is draw the
+    # same picture twice, which is the thing it was brought in to avoid, so it is
+    # logged rather than swallowed (this module's rule — see `_place`'s block
+    # flip, which warns for the same reason).
+    if repeat_index % 2:
+        listed = _entry_list_boxes(entries, frame, top, widest + lead, height)
+        if listed is not None:
+            return listed
+        _LOG.warning(
+            "场景 `%s`：连着第 %d 幕同一种画法，本来要换成竖排，"
+            "但 %d 个条目竖着放不下（画框只剩 %.0fpx），退回网格",
+            scene.id,
+            repeat_index,
+            len(entries),
+            frame.bottom - top,
+        )
+
+    centre_y = (top + frame.bottom) / 2
+
+    count = len(entries)
+    chosen: tuple[int, int, float] | None = None
+    for rows in range(1, ENTRY_ROWS_MAX + 1):
+        columns = math.ceil(count / rows)
+        block = rows * height + (rows - 1) * ENTRY_GAP
+        if top + block > frame.bottom + FIT_TOLERANCE:
+            # More rows is a taller grid, so the first one that overflows ends
+            # the search: every count after it overflows too.
+            break
+        room = frame.right_of(centre_y, block / 2) - frame.left
+        if columns * width + (columns - 1) * ENTRY_GAP <= room:
+            chosen = (rows, columns, block)
+            break
+    if chosen is None:
+        raise LayoutError(
+            f"场景 `{scene.id}` 有 {count} 个条目、每个 {width:.0f}px 宽，"
+            f"在剩下的 {frame.bottom - top:.0f}px 高的画框里排到 {ENTRY_ROWS_MAX} 行也放不下。"
+            "少写几个，或者把它们拆到另一幕"
+        )
+    rows, columns, block = chosen
+
+    left = frame.left
+    right = frame.right_of(centre_y, block / 2)
+    origin_y = centre_y - block / 2 + height / 2
+    boxes: dict[str, _Box] = {}
+    for index, obj in enumerate(entries):
+        row, column = divmod(index, columns)
+        # Centred per row, for `_card_boxes`' reason: a last row of one tile
+        # left-aligned under a full row reads as a tile that fell off.
+        in_row = min(columns, count - row * columns)
+        row_width = in_row * width + (in_row - 1) * ENTRY_GAP
+        row_left = (left + right) / 2 - row_width / 2 + width / 2
+        boxes[obj.id] = _Box(
+            x=row_left + column * (width + ENTRY_GAP),
+            y=origin_y + row * (height + ENTRY_GAP),
+            width=width,
+            height=height,
+        )
+    return boxes
+
+
+def _entry_list_boxes(
+    entries: list[StoryboardObject],
+    frame: _Frame,
+    top: float,
+    natural_width: float,
+    height: float,
+) -> dict[str, _Box] | None:
+    """The same entries one per row. `None` when they do not fit, never a raise.
+
+    The second arrangement `_entry_boxes` reaches for when this is the second
+    scene in a row drawing the same preset. Everything about *what* is drawn is
+    identical — same `_Box`, same width rule, same drawer on the other side — so
+    the only thing this can get wrong is the arithmetic, and the arithmetic is
+    the one thing `None` protects: the caller still has the grid to fall back on.
+
+    A separate function rather than a flag inside `_entry_boxes` because the two
+    differ in their *failure contract* and not only in their numbers. The grid
+    raises, and its message names the two levers a reader can pull (fewer
+    entries, or split the scene). A list that raised the same sentence would be
+    telling the reader to go edit a scene that draws perfectly well as a grid.
+
+    Centred as a block, and each row the same width — the opposite call from the
+    grid's per-row centring, and for the grid's own reason read backwards. There
+    the rows are different lengths and a short row left-aligned reads as a tile
+    that fell off; here every row is one entry and the column *is* the shape.
+    """
+    width = min(max(natural_width, ENTRY_LIST_MIN_WIDTH), ENTRY_LIST_MAX_WIDTH)
+    block = len(entries) * height + (len(entries) - 1) * ENTRY_GAP
+    if top + block > frame.bottom + FIT_TOLERANCE:
+        return None
+    centre_y = (top + frame.bottom) / 2
+    left = frame.left
+    right = frame.right_of(centre_y, block / 2)
+    if width > right - left + FIT_TOLERANCE:
+        return None
+    centre_x = (left + right) / 2
+    origin_y = centre_y - block / 2 + height / 2
+    return {
+        obj.id: _Box(
+            x=centre_x,
+            y=origin_y + index * (height + ENTRY_GAP),
+            width=width,
+            height=height,
+        )
+        for index, obj in enumerate(entries)
+    }
 
 
 # --------------------------------------------------------------------------
@@ -1952,14 +2190,15 @@ def _form_of(obj: StoryboardObject) -> TreeForm:
 
 
 #: The primitives a **shared** placer places, rather than the preset: the
-#: right-hand text column, the card grid, and the block stack.
+#: right-hand text column, the two list grids, and the block stack.
 #:
 #: Everything else in a scene is the preset's business — which is the same
 #: division `_to_element` dispatches on, said from the other side.
 #:
 #: This answers *who places it*, which is not the question `_has_company` asks.
-#: The two lists differ by one word and `NON_COMPANY_PRIMITIVES` says why.
-SHARED_PRIMITIVES: frozenset[str] = frozenset({"readout", "card", "tree", "code"})
+#: `card` and `entry` are both shared placers and both count as company;
+#: `NON_COMPANY_PRIMITIVES` says why that is a correction rather than a slip.
+SHARED_PRIMITIVES: frozenset[str] = frozenset({"readout", "card", "entry", "tree", "code"})
 
 #: The mounted primitives: the ones that hang off another object instead of
 #: taking a slot in the frame.
@@ -2007,10 +2246,11 @@ NON_COMPANY_PRIMITIVES: frozenset[str] = MOUNTED_PRIMITIVES | {"readout", "tree"
 #: The presets where a block may take the *top* of the frame instead of the floor.
 #:
 #: Narrow on purpose, and the reason is a collision rather than a preference.
-#: `values` and `compare` are the only two placers that honour `frame.top` — the
-#: other five pin at least one axis to a stage ratio (`lane` to `LANE_Y_RATIO`,
-#: `chain` to `CHAIN_Y_RATIO`, `generic` to `PANEL_TOP_RATIO`, `hub` and `field`
-#: to their own origins). A block anchored at the top of a `generic` scene would
+#: `values`, `compare` and `tiles` are the only three placers that honour
+#: `frame.top` — the other five pin at least one axis to a stage ratio (`lane` to
+#: `LANE_Y_RATIO`, `chain` to `CHAIN_Y_RATIO`, `generic` to `PANEL_TOP_RATIO`,
+#: `hub` and `field` to their own origins). A block anchored at the top of a
+#: `generic` scene would
 #: run through the column starting at y=84; a `lane` obstacle sits at y 272–348
 #: and a modest block is 288 tall from y 18. Both would be caught by `_check_fit`
 #: and become a `LayoutError` — **after the last model call**, which is the worst
@@ -2467,6 +2707,48 @@ def _values_boxes(
     return boxes, frozenset()
 
 
+def _tiles_boxes(
+    scene: StoryboardScene, stage: RenderStage, frame: _Frame
+) -> tuple[dict[str, _Box], frozenset[str]]:
+    """The leftover bodies of a `tiles` scene. The tiles themselves are
+    `_entry_boxes`'.
+
+    A line-for-line twin of `_values_boxes` above, and written out rather than
+    shared with it on purpose. The two do the same thing for the same reason —
+    the preset's own picture is a *list*, which `_entry_boxes` places, so all
+    this owes the frame is putting any `body` down first so the grid has
+    something to start under. Only the preset named in the error differs.
+
+    Sharing them would mean `_values_boxes` becomes a wrapper around a helper,
+    and that would cost a check that exists: `test_render_block` reads
+    `_values_boxes`' **source** for the string `frame.top`, because membership in
+    `_BLOCK_ON_TOP_PRESETS` is exactly the fact "this placer reads the frame's
+    top edge" and `inspect.getsource` is how that fact is legible in one line.
+    A wrapper that hands `frame` to something else reads as a placer that does
+    not. Twenty lines is the cheaper half of that trade.
+    """
+    bodies = _bodies_but(scene)
+    if not bodies:
+        return {}, frozenset()
+    tallest = max(_body_size(obj)[1] for obj in bodies)
+    y = frame.top + tallest / 2
+    pitch = 24.0
+    total = sum(_body_size(obj)[0] for obj in bodies) + pitch * (len(bodies) - 1)
+    room = frame.right_of(y, tallest / 2) - frame.left
+    if total > room:
+        raise LayoutError(
+            f"场景 `{scene.id}` 选了 `tiles`，但顶上那 {len(bodies)} 个对象横着要 "
+            f"{total:.0f}px，画框只留得出 {room:.0f}px"
+        )
+    cursor = frame.left + (room - total) / 2
+    boxes: dict[str, _Box] = {}
+    for obj in bodies:
+        width, height = _body_size(obj)
+        boxes[obj.id] = _Box(x=cursor + width / 2, y=y, width=width, height=height)
+        cursor += width + pitch
+    return boxes, frozenset()
+
+
 def _link_endpoint_ids(scene: StoryboardScene) -> set[str]:
     """Ids that some link connects to. These are the chain's participants."""
     return {
@@ -2852,12 +3134,13 @@ _PLACERS: dict[
     "field": _field_boxes,
     "compare": _compare_boxes,
     "values": _values_boxes,
+    "tiles": _tiles_boxes,
     "generic": _generic_boxes,
 }
 
 
 def _place(
-    scene: StoryboardScene, stage: RenderStage
+    scene: StoryboardScene, stage: RenderStage, *, repeat_index: int = 0
 ) -> tuple[dict[str, _Box], frozenset[str], _Frame]:
     """Panels first, then the picture around them.
 
@@ -2866,6 +3149,12 @@ def _place(
     on top. Deciding the panels first is what makes `_Frame` possible, and it is
     also the honest order — the panels are the only thing here whose size is not
     a free choice.
+
+    `repeat_index` goes to `_entry_boxes` and nowhere else. It is not handed to
+    `placer` either, and that is a decision rather than an oversight: no preset's
+    picture is a function of how many scenes came before it, and widening that
+    signature would invite exactly the preset that made itself different as it
+    went along.
     """
     placer = _PLACERS.get(scene.scene_type)
     if placer is None:
@@ -2927,7 +3216,24 @@ def _place(
         # keep clear of them sideways.
         picture = dict(boxes)
         boxes.update(panels)
-        boxes.update(_card_boxes(scene, stage, picture_frame, picture))
+        cards = _card_boxes(scene, stage, picture_frame, picture)
+        boxes.update(cards)
+        # The tile grid starts below the cards, not below the picture, for the
+        # reason both grids start below the picture rather than below the panels:
+        # each asks "what is already above me". Handed `picture` alone, two grids
+        # in one scene would each centre themselves in the same space and land on
+        # top of each other — which `_check_fit` catches, and catching it means
+        # raising, after the last model call. A scene with both a row of values
+        # and a row of entries is rare; the cost of it being terminal is not.
+        boxes.update(
+            _entry_boxes(
+                scene,
+                stage,
+                picture_frame,
+                {**picture, **cards},
+                repeat_index=repeat_index,
+            )
+        )
         boxes.update(blocks)
         boxes.update(notes)
         _centre_a_lone_note_band(boxes, notes, band_frame, notes_bottom)
@@ -3737,6 +4043,39 @@ def _to_card(obj: StoryboardObject, box: _Box, scene: StoryboardScene) -> CardEl
         width=box.width,
         height=box.height,
         props=_props_for(obj, "card"),
+    )
+
+
+def _to_entry(obj: StoryboardObject, box: _Box) -> EntryElement:
+    """One entry: a mark and a name, and nothing the player has to look up.
+
+    The one asymmetry against `_to_card` is the `icon`. A card's type is live,
+    so its words and its pill have to travel with the card — the player cannot
+    derive them. An entry's mark is static, and that removes the table: the name
+    resolves against `RenderSpec.glyphs`, which `_embedded_glyphs` fills in from
+    the same place `body.glyph` comes from, so all this has to do is carry the
+    name across.
+
+    It carries the name **without checking it**, deliberately. `unknown_icon`
+    refused an unregistered name upstream, where there was still a model to
+    retry with; a name that gets here is one of the closed set, or the storyboard
+    was written by hand. Failing here would be the same failure one layer too
+    late — after the last model call — which is the trade `_type_gloss_of` above
+    makes in the other direction.
+    """
+    declared_text = obj.props.get("text")
+    declared_icon = obj.props.get("icon")
+    return EntryElement(
+        id=obj.id,
+        role=obj.role,
+        label=obj.label,
+        x=box.x,
+        y=box.y,
+        text=declared_text if isinstance(declared_text, str) and declared_text else obj.label,
+        icon=declared_icon if isinstance(declared_icon, str) else "",
+        width=box.width,
+        height=box.height,
+        props=_props_for(obj, "entry"),
     )
 
 
@@ -4846,7 +5185,7 @@ def _to_element(
             f"`{obj.id}`（角色 `{obj.role}`）的图元 `{primitive}` 还没有布局实现——"
             f"改用 {alternatives} 就能画出来"
         )
-    if primitive in ("body", "readout", "card", "tree", "code"):
+    if primitive in ("body", "readout", "card", "entry", "tree", "code"):
         box = boxes.get(obj.id)
         if box is None:
             raise LayoutError(f"`{obj.id}`（{primitive}）没有被摆放：预设没有给它位置")
@@ -4854,6 +5193,8 @@ def _to_element(
             return _to_readout(obj, box)
         if primitive == "card":
             return _to_card(obj, box, scene)
+        if primitive == "entry":
+            return _to_entry(obj, box)
         if primitive == "tree":
             return _to_tree(obj, box)
         if primitive == "code":
@@ -5001,16 +5342,29 @@ def _to_control(control: StoryboardControl) -> RenderControl:
 # --------------------------------------------------------------------------
 
 
-def layout_scene(scene: StoryboardScene, *, stage: RenderStage | None = None) -> RenderScene:
+def layout_scene(
+    scene: StoryboardScene,
+    *,
+    stage: RenderStage | None = None,
+    repeat_index: int = 0,
+) -> RenderScene:
     """Place one scene. Deterministic: same input, byte-identical output.
 
     Elements come out in the storyboard's own object order — the same order the
     model wrote them in, which is the order the narration introduces them.
     Sorting them would be more "canonical" and would also mean the drawing order
     stops matching the teaching order, for no gain.
+
+    `repeat_index` is the one thing here that is about the *film* rather than
+    about this scene: how many scenes in a row before it drew the same preset.
+    It is a parameter rather than something read off the scene because a scene
+    cannot see its neighbours, and it is threaded from `layout_storyboard` —
+    which is also the only caller that has neighbours to count. A caller laying
+    one scene out by hand (a test, a demo) gets 0, which is the first of a run,
+    and that is the arrangement every scene drew before this parameter existed.
     """
     stage = stage or RenderStage()
-    boxes, leads, frame = _place(scene, stage)
+    boxes, leads, frame = _place(scene, stage, repeat_index=repeat_index)
     links = _link_points(scene, boxes)
     # One `_Mounts` per scene, filled as the objects are converted below. It is
     # what lets the second verdict on a body know the first one exists — see
@@ -5145,9 +5499,28 @@ def _palette_for(storyboard: StoryboardIR) -> str:
 
 
 def layout_storyboard(storyboard: StoryboardIR, *, stage: RenderStage | None = None) -> RenderSpec:
-    """Place every scene. The one call the pipeline and the CLI both use."""
+    """Place every scene. The one call the pipeline and the CLI both use.
+
+    The one place in this module that looks at the film rather than at a scene:
+    it counts how many scenes in a row have drawn the same preset and passes
+    that down. Nothing else here has neighbours to compare against, which is why
+    the count is made here and spent in `_entry_boxes` rather than being
+    recomputed wherever it is needed.
+
+    Counted on `scene_type` and not on "does it have entries", because the
+    question a viewer is asking is 「这一幕和上一幕是不是同一种画法」 and
+    `scene_type` is that 画法's name. Two scenes in a row that both happen to
+    contain a card, under two different presets, is not the repetition anyone
+    complained about.
+    """
     stage = stage or RenderStage()
-    scenes = [layout_scene(scene, stage=stage) for scene in storyboard.scenes]
+    scenes: list[RenderScene] = []
+    previous: str | None = None
+    repeat_index = 0
+    for scene in storyboard.scenes:
+        repeat_index = repeat_index + 1 if scene.scene_type == previous else 0
+        previous = scene.scene_type
+        scenes.append(layout_scene(scene, stage=stage, repeat_index=repeat_index))
     used = _embedded_glyphs(scenes)
     return RenderSpec(
         storyboard_id=storyboard.storyboard_id,
@@ -5166,9 +5539,10 @@ def layout_storyboard(storyboard: StoryboardIR, *, stage: RenderStage | None = N
 def _embedded_glyphs(scenes: list[RenderScene]) -> list[str]:
     """Every glyph the spec has to carry, in a stable order.
 
-    Two sources, and they are different kinds of fact: a body's glyph is a choice
-    the model made, a verdict's is derived from its `mark` — which is why the
-    element carries the resolved name rather than making the player resolve it.
+    Three sources, and they are different kinds of fact: a body's glyph and an
+    entry's icon are choices the model made, a verdict's is derived from its
+    `mark` — which is why the element carries the resolved name rather than
+    making the player resolve it.
 
     Collected from the *laid-out* scenes rather than from the storyboard, so the
     spec carries exactly the glyphs its elements draw and not one more. This used
@@ -5185,6 +5559,12 @@ def _embedded_glyphs(scenes: list[RenderScene]) -> list[str]:
                     used.add(element.glyph)
             elif isinstance(element, VerdictElement):
                 used.update(element.glyphs.values())
+            elif isinstance(element, EntryElement):
+                # An entry's mark. Unlike a body's glyph this one is never
+                # absent — `entry.icon` is required — so the `if` is here for a
+                # hand-written storyboard rather than for the model's output.
+                if element.icon:
+                    used.add(element.icon)
             elif isinstance(element, TreeElement):
                 # A tree row's icon, which is a choice the model made exactly as
                 # a body's glyph is. Absent for four forms out of five, and for
